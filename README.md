@@ -7,15 +7,15 @@ Currently only MySQL is supported
 Configuration of SQL Source:
 ----------
 
-agent.sources.sql-source.type = org.apache.flume.source.sql.SQLSource
-agent.sources.sql-source.connection.url = jdbc:mysql://mysql/personas
-agent.sources.sql-source.user = mvalle
-agent.sources.sql-source.password = mvalle
-agent.sources.sql-source.table = personas
-agent.sources.sql-source.columns.to.select = *
-agent.sources.sql-source.incremental.column.name = id
-agent.sources.sql-source.incremental.value = 0
-agent.sources.sql-source.run.query.delay=1000
+agent.sources.sql-source.type = org.apache.flume.source.sql.SQLSource  
+agent.sources.sql-source.connection.url = jdbc:mysql://mysql/personas  
+agent.sources.sql-source.user = mvalle  
+agent.sources.sql-source.password = mvalle  
+agent.sources.sql-source.table = personas  
+agent.sources.sql-source.columns.to.select = *  
+agent.sources.sql-source.incremental.column.name = id  
+agent.sources.sql-source.incremental.value = 0  
+agent.sources.sql-source.run.query.delay=1000  
 
 Thanks!!
 
