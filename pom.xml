@@ -1,8 +1,69 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.flume</groupId>
+    <artifactId>flume-ng-sources</artifactId>
+    <version>1.4.0</version>
+  </parent>
   <groupId>org.apache.flume.flume-ng-sources</groupId>
   <artifactId>flume-ng-sql-source</artifactId>
   <version>0.8</version>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.3</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <artifactSet>
+                <excludes>
+					<exclude>org.apache.flume:flume-ng-core</exclude>
+					<exclude>org.apache.flume:flume-ng-core</exclude>
+					<exclude>org.apache.flume:flume-ng-sdk</exclude>
+					<exclude>org.apache.flume:flume-ng-configuration</exclude>
+					<exclude>org.slf4j:slf4j-api</exclude>
+					<exclude>com.google.guava:guava</exclude>
+					<exclude>com.google.code.findbugs</exclude>
+					<exclude>commons-io:commons-io</exclude>
+					<exclude>commons-codec:commons-codec</exclude>
+					<exclude>log4j:log4j</exclude>
+					<exclude>org.slf4j:slf4j-log4j12</exclude>
+					<exclude>commons-cli:commons-cli</exclude>
+					<exclude>commons-lang:commons-lang</exclude>
+					<exclude>org.apache.avro:avro</exclude>
+					<exclude>org.codehaus.jackson:jackson-core-asl</exclude>
+					<exclude>org.codehaus.jackson:jackson-mapper-asl</exclude>
+					<exclude>com.thoughtworks.paranamer:paranamer</exclude>
+					<exclude>org.xerial.snappy:snappy-java</exclude>
+					<exclude>org.apache.avro:avro-ipc</exclude>
+					<exclude>org.apache.velocity:velocity</exclude>
+					<exclude>commons-collections:commons-collections</exclude>
+					<exclude>io.netty:netty</exclude>
+					<exclude>joda-time:joda-time</exclude>
+					<exclude>org.mortbay.jetty:servlet-api</exclude>
+					<exclude>org.mortbay.jetty:jetty-util</exclude>
+					<exclude>org.mortbay.jetty:jetty</exclude>
+					<exclude>com.google.code.gson:gson</exclude>
+					<exclude>org.apache.thrift:libthrift</exclude>
+					<exclude>org.apache.httpcomponents:httpclient</exclude>
+					<exclude>org.apache.httpcomponents:httpcore</exclude>
+					<exclude>commons-logging:commons-logging</exclude>
+					<exclude>org.apache.mina:mina-core</exclude>
+                </excludes>
+              </artifactSet>
+              <minimizeJar>true</minimizeJar>
+	        </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
   <dependencies>
     <dependency>
     	<groupId>org.apache.flume</groupId>
