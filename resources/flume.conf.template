@@ -1,0 +1,49 @@
+# Name the components on this agent
+agent.sources = sql-source
+agent.sinks = kafka-sink
+agent.channels = memory-channel
+
+# Describe/configure the source
+agent.sources = sql-source
+agent.sources.sql-source.type = org.apache.flume.source.SQLSource  
+
+# URL to connect to database (currently only mysql is supported)
+agent.sources.sql-source.connection.url = jdbc:mysql://host:port/database
+
+# Database connection properties
+agent.sources.sql-source.user = username  
+agent.sources.sql-source.password = userpassword  
+agent.sources.sql-source.table = table  
+
+# Columns to import to kafka (default * import entire row)
+agent.sources.sql-source.columns.to.select = *  
+
+# Increment column properties 
+agent.sources.sql-source.incremental.column.name = id  
+# Increment value is from you want to start taking data from tables (0 will import entire table)
+agent.sources.sql-source.incremental.value = 0  
+
+# Query delay, each configured milisecond the query will be sent
+agent.sources.sql-source.run.query.delay=10000 
+
+# Status file is used to save last readed row
+agent.sources.sql-source.status.file.path = /var/lib/flume
+agent.sources.sql-source.status.file.name = sql-source.status
+
+agent.sources.sql-source.channels = memory-channel
+
+# Describe the sinks
+
+agent.sinks.kafka-sink.type = org.apache.flume.sink.kafka.KafkaSink
+agent.sinks.kafka-sink.zk.connect = zookeeperHost1:2181,zookeeperHost2:2181,zookeeperHost3:2181
+agent.sinks.kafka-sink.topic = topicName
+agent.sinks.kafka-sink.batchsize = 200
+agent.sinks.kafka-sink.producer.type = async
+agent.sinks.kafka-sink.serializar.class = kafka.serializer.class
+agent.sinks.kafka-sink.metadata.broker.list = kafkaHost1:9092,kafkaHost2:9092
+agent.sinks.kafka-sink.channel = memory-channel
+
+# Use a channel which buffers events in memory
+agent.channels.memory-channel.type = memory
+agent.channels.memory-channel.capacity = 1000
+agent.channels.memory-channel.transactionCapacity = 100
