@@ -9,6 +9,9 @@ import org.apache.flume.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ *  * @author Marcelo Valle https://github.com/mvalleavila
+ */
 public class SQLSourceUtils {
 	private static final Logger log = LoggerFactory.getLogger(SQLSourceUtils.class);
 

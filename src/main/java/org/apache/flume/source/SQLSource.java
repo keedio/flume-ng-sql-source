@@ -49,6 +49,8 @@ import org.slf4j.LoggerFactory;
  * <tt>incremental.column.name </tt> column name for incremental import <p>
  * <tt>incremental.value </tt> TODO: Change this to read from file the value <p>
  * <tt>run.query.delay </tt> delay time to do each query to database <p>
+ * 
+ * @author Marcelo Valle https://github.com/mvalleavila
  */
 public class SQLSource extends AbstractSource implements Configurable, PollableSource {
 	private static final Logger log = LoggerFactory.getLogger(SQLSource.class);
