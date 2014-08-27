@@ -4,6 +4,17 @@ flume-ng-sql-source
 This project is used for [flume-ng](https://github.com/apache/flume) to communicate with sql databases
 Currently only MySQL is supported
 
+Compilation and package
+----------
+```
+  $ mvn package
+```
+
+Use
+---
+
+Copy flume-ng-sql-source-0.8.jar in target folder into flume libs folder
+
 Configuration of SQL Source:
 ----------
 
