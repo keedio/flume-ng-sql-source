@@ -56,23 +56,23 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 	private static MySqlDBEngine mDBEngine;
 	private static MySqlDao mDAO;
 	
-	private String incrementalValue, table, columnsToSelect,incrementalColumnName;
+	private String table, columnsToSelect,incrementalColumnName;
 	private int runQueryDelay;
+	private long incrementalValue;
+	private SQLSourceUtils sqlSourceUtils;
 	
 	public Status process() throws EventDeliveryException {
 		List<Event> eventList = new ArrayList<Event>();
 		byte[] message;
 		Event event;
 		Map<String, String> headers;
-			
+		
 		try
 		{
-			mDAO= new MySqlDao(mDBEngine.getConnection());		
-			
 			String where = " WHERE " + incrementalColumnName + ">" + incrementalValue;
 			String query = "SELECT " + columnsToSelect + " FROM " + table + where + " ORDER BY "+ incrementalColumnName + ";";
 			
-			log.info("Query: " + query);
+			log.debug("Query: " + query);
 			Vector<Vector<String>> queryResult = mDAO.runQuery(query);
 			Vector<String> columns = mDAO.getColumns();
 			
@@ -92,8 +92,8 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 
 			if (!queryResult.isEmpty())
 			{
-				incrementalValue = queryResult.lastElement().get(incrementalColumnPosition);
-				log.info("Query" + queryResult.toString());
+				incrementalValue = Long.parseLong(queryResult.lastElement().get(incrementalColumnPosition),10);
+				log.info("New values append to database, query result: \n" + queryResult.toString());
 					
 				for (int i=0;i<queryResult.size();i++)
 				{
@@ -109,16 +109,16 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 	                eventList.add(event);
 				}
 				getChannelProcessor().processEventBatch(eventList);
+				log.info("Last row increment value readed: " + incrementalValue + ", updating status file...");
+				sqlSourceUtils.updateStatusFile(incrementalValue);
 			}
-			
-			log.info("Last row increment value readed: " + incrementalValue);
 			Thread.sleep(runQueryDelay);				
             return Status.READY;
 		}
 		catch(SQLException e)
 		{
-			e.printStackTrace();
 			log.error("SQL exception, check if query is correctly constructed");
+			e.printStackTrace();
 			return Status.BACKOFF;
 		}
 		catch(InterruptedException e)
@@ -130,11 +130,13 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 
 
 	public void start(Context context) {
+		log.info("Starting sql source {} ...", this);
 	    super.start();	    
 	}
 
 	@Override
 	public synchronized void stop() {
+		log.info("Stopping sql source {} ...", this);
 		try {
 			log.info("Closing database connection");
 			mDBEngine.CloseConnection();
@@ -145,7 +147,6 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 		}
 		super.stop();
 	}
-
 
 	@Override
 	public void configure(Context context) {
@@ -158,16 +159,23 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 		user = context.getString("user");
 		password = context.getString("password");
 		table = context.getString("table");
-		columnsToSelect = context.getString("columns.to.select");
+		columnsToSelect = context.getString("columns.to.select", "*");
 		incrementalColumnName = context.getString("incremental.column.name");
-		incrementalValue = context.getString("incremental.value");
-		runQueryDelay = context.getInteger("run.query.delay");
 		
+		sqlSourceUtils = new SQLSourceUtils(context);		
+		
+		/* Get incremental value form file is exist, if not the starting value to select table
+		   will be readed from configuration file */
+		
+		incrementalValue = sqlSourceUtils.getCurrentIncrementalValue();
+		
+		runQueryDelay = context.getInteger("run.query.delay");		
 		
 		mDBEngine = new MySqlDBEngine(connectionURL, user, password);
 		log.info("Establishing connection to database");
 		try {
 			mDBEngine.EstablishConnection();
+			mDAO= new MySqlDao(mDBEngine.getConnection());
 		} catch (SQLException e) {
 			log.error("Error establishing connection to database");
 			e.printStackTrace();
