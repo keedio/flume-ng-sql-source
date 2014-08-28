@@ -18,12 +18,11 @@
  *******************************************************************************/
 package org.apache.flume.source;
 
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
 import org.apache.flume.Context;
 import org.apache.flume.Event;
@@ -64,7 +63,6 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 	private SQLSourceUtils sqlSourceUtils;
 	
 	public Status process() throws EventDeliveryException {
-		List<Event> eventList = new ArrayList<Event>();
 		byte[] message;
 		Event event;
 		Map<String, String> headers;
@@ -74,49 +72,47 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 			String where = " WHERE " + incrementalColumnName + ">" + incrementalValue;
 			String query = "SELECT " + columnsToSelect + " FROM " + table + where + " ORDER BY "+ incrementalColumnName + ";";
 			
-			log.debug("Query: " + query);
-			Vector<Vector<String>> queryResult = mDAO.runQuery(query);
-			Vector<String> columns = mDAO.getColumns();
-			
-			boolean columnPosFind;
+			log.info("Query: " + query);
+			ResultSet queryResult = mDAO.runQuery(query);
 			String queryResultRow;
 
-			columnPosFind = false;
-			int incrementalColumnPosition=0;
-			do
-			{
-				if (columns.get(incrementalColumnPosition).equals(incrementalColumnName))
-					columnPosFind=true;
-				else
-					incrementalColumnPosition++;
-			}while(!columnPosFind);
-				
 
-			if (!queryResult.isEmpty())
-			{
-				incrementalValue = Long.parseLong(queryResult.lastElement().get(incrementalColumnPosition),10);
-				log.info("New values append to database, query result: \n" + queryResult.toString());
+			ResultSetMetaData mMetaData = queryResult.getMetaData();
+			int mNumColumns = mMetaData.getColumnCount();
+			
+			
+			int a=0;
+			
+			while(queryResult.next()){
+				a++;
+				queryResultRow ="";
+				
+				for(int i = 1; i <= mNumColumns-1; i++){
+					queryResultRow = queryResultRow + queryResult.getString(i) +",";
+				}
+				
+				queryResultRow = queryResultRow + queryResult.getString(mNumColumns);
 					
-				for (int i=0;i<queryResult.size();i++)
-				{
-					queryResultRow = queryResult.get(i).toString();
-					queryResultRow = queryResultRow.substring(1, queryResultRow.length()-1);
 					message = queryResultRow.getBytes();
 	                event = new SimpleEvent();
 	                headers = new HashMap<String, String>();
 	                headers.put("timestamp", String.valueOf(System.currentTimeMillis()));
-	                log.debug("Message: {}", new String(message));
 	                event.setBody(message);
 	                event.setHeaders(headers);
-	                eventList.add(event);
-				}
-				getChannelProcessor().processEventBatch(eventList);
+	                getChannelProcessor().processEvent(event);
+				
+			}
+			if (queryResult.last())
+			{
+				incrementalValue = Long.parseLong(queryResult.getString(incrementalColumnName),10);
 				log.info("Last row increment value readed: " + incrementalValue + ", updating status file...");
 				sqlSourceUtils.updateStatusFile(incrementalValue);
 			}
+			
 			Thread.sleep(runQueryDelay);				
             return Status.READY;
-		}
+			}
+	
 		catch(SQLException e)
 		{
 			log.error("SQL exception, check if query is correctly constructed");

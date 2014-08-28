@@ -33,23 +33,14 @@ public class MySqlDao {
 	 * @return Vector<Vector<String>>
 	 * @throws SQLException
 	 */
-	public Vector<Vector<String>> runQuery(String mQuery) throws SQLException{
-		Vector<Vector<String>> mResults = new Vector<Vector<String>>();
+	public ResultSet runQuery(String mQuery) throws SQLException{
 		Statement mStatement = (Statement) this.mConnection.createStatement();
 		ResultSet mResultSet = mStatement.executeQuery(mQuery);
 		mMetaData = mResultSet.getMetaData();
-		
 		int mNumColumns = mMetaData.getColumnCount();
 		setColumns(mNumColumns,mMetaData);
-		
-		while(mResultSet.next()){
-			Vector<String> mRow = new Vector<String>();
-			for(int i = 1; i <= mNumColumns; i++){
-				mRow.add(mResultSet.getString(i));
-			}
-			mResults.add(mRow);
-		}
-		return mResults;
+
+		return mResultSet;
 	}
 	
 	/**
