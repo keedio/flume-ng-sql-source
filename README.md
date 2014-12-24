@@ -29,9 +29,8 @@ Deployment
 
 Copy flume-ng-sql-source-0.8.jar in target folder into flume plugins dir folder
 ```
-  $ cd $FLUME_HOME
-  $ mkdir -p plugins.d/sql-source/lib plugins.d/sql-source/lib
-  $ cp flume-ng-sql-source-0.8.jar plugins.d/sql-source/lib
+  $ mkdir -p $FLUME_HOME/plugins.d/sql-source/lib $FLUME_HOME/plugins.d/sql-source/lib
+  $ cp flume-ng-sql-source-0.8.jar $FLUME_HOME/plugins.d/sql-source/lib
 ```
 
 ### Specific installation by database engine
