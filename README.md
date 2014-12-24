@@ -2,18 +2,45 @@ flume-ng-sql-source
 ================
 
 This project is used for [flume-ng](https://github.com/apache/flume) to communicate with sql databases
-Currently only MySQL is supported
 
-Compilation and package
+Current sql database engines supported
+-------------------------------
+
+- MySQL
+- PostgreSQL
+- SQLite
+
+On development databases
+------------------------
+- Oracle
+- Derby
+- Microsoft SQLServer
+- DB2
+- Sysbase IQ
+
+Compilation and packaging
 ----------
 ```
   $ mvn package
 ```
 
-Use
----
+Deployment
+----------
 
-Copy flume-ng-sql-source-0.8.jar in target folder into flume libs folder
+Copy flume-ng-sql-source-0.8.jar in target folder into flume plugins dir folder
+```
+  $ cd $FLUME_HOME
+  $ mkdir -p plugins.d/sql-source/lib plugins.d/sql-source/lib
+  $ cp flume-ng-sql-source-0.8.jar plugins.d/sql-source/lib
+```
+
+### Specific installation by database engine
+##### MySQL
+##### MySQL
+##### MySQL
+##### MySQL
+
+
 
 Configuration of SQL Source:
 ----------
