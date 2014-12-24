@@ -35,12 +35,19 @@ Copy flume-ng-sql-source-0.8.jar in target folder into flume plugins dir folder
 ```
 
 ### Specific installation by database engine
-##### MySQL
-##### MySQL
-##### MySQL
-##### MySQL
 
-
+##### MySQL
+TODO
+##### Oracle
+TODO
+##### Derby
+TODO
+##### Microsoft SQLServer
+TODO
+##### DB2
+TODO
+##### Sysbase IQ
+TODO
 
 Configuration of SQL Source:
 ----------
@@ -74,6 +81,10 @@ agent.sources.sql-source.status.file.path = /var/lib/flume
 agent.sources.sql-source.status.file.name = sql-source.status
 
 ```
+
+Testing the source
+---------------------
+To test this source take a look to https://github.com/keedio/flume-stress-test-tools
 
 Thanks!!
 
