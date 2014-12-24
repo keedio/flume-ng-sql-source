@@ -18,8 +18,10 @@
  *******************************************************************************/
 package org.apache.flume.source;
 
+
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.Statement;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,6 +35,8 @@ import org.apache.flume.event.SimpleEvent;
 import org.apache.flume.source.AbstractSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+
 
 
 /**
@@ -52,131 +56,216 @@ import org.slf4j.LoggerFactory;
  * @author Marcelo Valle https://github.com/mvalleavila
  */
 public class SQLSource extends AbstractSource implements Configurable, PollableSource {
-	private static final Logger log = LoggerFactory.getLogger(SQLSource.class);
-	
-	private static MySqlDBEngine mDBEngine;
-	private static MySqlDao mDAO;
-	
-	private String table, columnsToSelect,incrementalColumnName;
-	private int runQueryDelay;
-	private long incrementalValue;
-	private SQLSourceUtils sqlSourceUtils;
-	
-	public Status process() throws EventDeliveryException {
-		byte[] message;
-		Event event;
-		Map<String, String> headers;
-		
-		try
-		{
-			String where = " WHERE " + incrementalColumnName + ">" + incrementalValue;
-			String query = "SELECT " + columnsToSelect + " FROM " + table + where + " ORDER BY "+ incrementalColumnName + ";";
-			
-			log.info("Query: " + query);
-			ResultSet queryResult = mDAO.runQuery(query);
-			String queryResultRow;
+    
+    private static final Logger log = LoggerFactory.getLogger(SQLSource.class);
+    private SqlDBEngine mDBEngine;
+    private SQLSourceUtils sqlSourceUtils;
+    private boolean isConnected;
+    private JdbcDriver driver;
+    private Statement statement;
+    
+       
+    @Override
+    public void configure(Context context) {
+              
+        log.info("Reading and processing configuration values for source " + getName());
+        sqlSourceUtils = new SQLSourceUtils(context);
+        
+        mDBEngine = new SqlDBEngine(sqlSourceUtils.getConnectionURL(),
+                                    sqlSourceUtils.getUserDataBase(),
+                                    sqlSourceUtils.getPasswordDatabase());
+        
+        log.info("Establishing connection to database " + sqlSourceUtils.getDataBase() + " for source  "  + getName());
+       
+        if (loadDriver(sqlSourceUtils.getDriverName())) {
+            log.info("Source " + getName() + " Connected to " + sqlSourceUtils.getDataBase()  );
+        } else {
+            log.error("Error loading driver " + getSqlSourceUtils().getDriverName());
+        }
+        
+    } //end configure
+    
+    
+    public Status process() throws EventDeliveryException {
+            byte[] message;
+            Event event;
+            Map<String, String> headers;
 
+            try
+            {
+                    String where = " WHERE " + sqlSourceUtils.getIncrementalColumnName() + ">" + sqlSourceUtils.getStatusFileIncrement();
+                    String query = "SELECT " + sqlSourceUtils.getColumnsToSelect() + " FROM " + sqlSourceUtils.getTable() + where + 
+                                   " ORDER BY "+ sqlSourceUtils.getIncrementalColumnName() + ";";
 
-			ResultSetMetaData mMetaData = queryResult.getMetaData();
-			int mNumColumns = mMetaData.getColumnCount();
-			
-			
-			int a=0;
-			
-			while(queryResult.next()){
-				a++;
-				queryResultRow ="";
-				
-				for(int i = 1; i <= mNumColumns-1; i++){
-					queryResultRow = queryResultRow + queryResult.getString(i) +",";
-				}
-				
-				queryResultRow = queryResultRow + queryResult.getString(mNumColumns);
-					
-					message = queryResultRow.getBytes();
-	                event = new SimpleEvent();
-	                headers = new HashMap<String, String>();
-	                headers.put("timestamp", String.valueOf(System.currentTimeMillis()));
-	                event.setBody(message);
-	                event.setHeaders(headers);
-	                getChannelProcessor().processEvent(event);
-				
-			}
-			if (queryResult.last())
-			{
-				incrementalValue = Long.parseLong(queryResult.getString(incrementalColumnName),10);
-				log.info("Last row increment value readed: " + incrementalValue + ", updating status file...");
-				sqlSourceUtils.updateStatusFile(incrementalValue);
-			}
-			
-			Thread.sleep(runQueryDelay);				
-            return Status.READY;
-			}
-	
-		catch(SQLException e)
-		{
-			log.error("SQL exception, check if query is correctly constructed");
-			e.printStackTrace();
-			return Status.BACKOFF;
-		}
-		catch(InterruptedException e)
-		{
-			e.printStackTrace();
-			return Status.BACKOFF;			
-		}
-	}
+                    log.info("Query: " + query);
+                   
+                    
+                    ResultSet queryResult = mDBEngine.runQuery(query,this.statement);
+                    String queryResultRow;
+                    ResultSetMetaData mMetaData = queryResult.getMetaData();
+                    int mNumColumns = mMetaData.getColumnCount();
+                    
+                    //retrieve each row from resultset
+                    while(queryResult.next()){
+                        queryResultRow ="";
 
+                        for(int i = 1; i <= mNumColumns-1; i++){
+                                queryResultRow = queryResultRow + queryResult.getString(i) +",";
+                        }
 
-	public void start(Context context) {
-		log.info("Starting sql source {} ...", this);
-	    super.start();	    
-	}
+                        queryResultRow = queryResultRow + queryResult.getString(mNumColumns);
 
-	@Override
-	public synchronized void stop() {
-		log.info("Stopping sql source {} ...", this);
-		try {
-			log.info("Closing database connection");
-			mDBEngine.CloseConnection();
-		} catch (SQLException e) {
-			log.error("Error closing database connection");
-			super.stop();
-			e.printStackTrace();
-		}
-		super.stop();
-	}
+                        message = queryResultRow.getBytes();
+                        event = new SimpleEvent();
+                        headers = new HashMap<String, String>();
+                        headers.put("timestamp", String.valueOf(System.currentTimeMillis()));
+                        event.setBody(message);
+                        event.setHeaders(headers);
+                        getChannelProcessor().processEvent(event);
 
-	@Override
-	public void configure(Context context) {
-		
-	    String connectionURL, user, password;
-		
-	    log.info("Reading and processing configuration values");
-	    
-		connectionURL = context.getString("connection.url");
-		user = context.getString("user");
-		password = context.getString("password");
-		table = context.getString("table");
-		columnsToSelect = context.getString("columns.to.select", "*");
-		incrementalColumnName = context.getString("incremental.column.name");
-		
-		sqlSourceUtils = new SQLSourceUtils(context);		
-		
-		/* Get incremental value form file is exist, if not the starting value to select table
-		   will be readed from configuration file */
-		
-		incrementalValue = sqlSourceUtils.getCurrentIncrementalValue();
-		
-		runQueryDelay = context.getInteger("run.query.delay");		
-		
-		mDBEngine = new MySqlDBEngine(connectionURL, user, password);
-		log.info("Establishing connection to database");
-		try {
-			mDBEngine.EstablishConnection();
-			mDAO= new MySqlDao(mDBEngine.getConnection());
-		} catch (SQLException e) {
-			log.error("Error establishing connection to database");
-			e.printStackTrace();
-		}
-	}
+                    }
+                    
+                    //A TYPE_FORWARD_ONLY ResultSet doesnot support method last() , among others.
+                    if (!(this.sqlSourceUtils.getDriverName().equals("sqlite"))){
+                        if ( queryResult.last())
+                        {
+
+                           sqlSourceUtils.setCurrentIncrementalValue(Long.parseLong(queryResult.getString(sqlSourceUtils.getIncrementalColumnName()),10));
+
+                            log.info("Last row increment value readed: " + sqlSourceUtils.getIncrementalValue() + ", updating status file...");
+                            sqlSourceUtils.updateStatusFile(sqlSourceUtils.getIncrementalValue());
+                        } 
+                    } else {
+                        ResultSet r = statement.executeQuery("SELECT COUNT(*) AS rowcount FROM " + this.sqlSourceUtils.getTable() + ";");
+                        r.next();
+                        int count = r.getInt("rowcount");
+                        if (count > this.sqlSourceUtils.getStatusFileIncrement()){
+                            sqlSourceUtils.setCurrentIncrementalValue(Long.parseLong(queryResult.getString(1),10));
+
+                            log.info("Last row increment value readed: " + sqlSourceUtils.getIncrementalValue() + ", updating status file...");
+                            sqlSourceUtils.updateStatusFile(sqlSourceUtils.getIncrementalValue());
+                        }
+                        r.close();
+                    }
+
+                    Thread.sleep(sqlSourceUtils.getRunQueryDelay());				
+        return Status.READY;
+                    }
+
+            catch(SQLException e)
+            {
+                    log.error("SQL exception, check if query for source " + getName() + " is correctly constructed");
+                    e.printStackTrace();
+                    return Status.BACKOFF;
+            }
+            catch(InterruptedException e)
+            {
+                    e.printStackTrace();
+                    return Status.BACKOFF;			
+            }
+    }
+
+ 
+    public void start(Context context) {
+            log.info("Starting sql source {} ...", getName());
+        super.start();	    
+    }
+
+    @Override
+    public void stop() {
+        
+            log.info("Stopping sql source {} ...", getName());
+            try {
+                    if (isConnected) {
+                        log.info("Closing connection to database " + sqlSourceUtils.getConnectionURL());
+                        mDBEngine.CloseConnection();
+                    } else {
+                        log.info("Nothing to close for " + sqlSourceUtils.getConnectionURL());
+                    }
+                    
+            } catch (SQLException e) {
+                    log.error("Error closing database connection " + sqlSourceUtils.getConnectionURL());
+                    super.stop();
+                    e.printStackTrace();
+            }
+            super.stop();
+    }
+
+    /*
+    @return SQLSourceUtils
+    */
+    public SQLSourceUtils getSqlSourceUtils(){
+        return sqlSourceUtils;
+    }
+    
+    /*
+    @return boolean driver register itself in DriverManager
+        default option will be used by jdbc drivers > 4.0
+    */
+    
+    private boolean loadDriver(String driverName)  {
+        try {
+            driver = JdbcDriver.valueOf(driverName.toUpperCase());
+            switch(driver){
+                case POSTGRESQL:
+                    Class.forName("org.postgresql.Driver");
+                    mDBEngine.EstablishConnection();
+                    statement = mDBEngine.getConnection().createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);                    
+                    isConnected = true;
+                    break;
+                    
+                case MYSQL:
+                    Class.forName("com.mysql.jdbc.Driver");
+                    mDBEngine.EstablishConnection();
+                    statement = mDBEngine.getConnection().createStatement();                    
+                    isConnected = true;
+                    break;
+                
+                case SQLITE:
+                    Class.forName("org.sqlite.JDBC"); 
+                    mDBEngine = new SqlDBEngine(sqlSourceUtils.getConnectionURL()); //sqlite does not support user neither pass
+                    mDBEngine.EstablishConnection();
+                    statement = mDBEngine.getConnection().createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+                    isConnected = true;
+                    break;
+                    
+                case SQLSERVER:
+                    Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");                    
+                    mDBEngine.EstablishConnection();
+                    statement = mDBEngine.getConnection().createStatement();
+                    isConnected = true;
+                    break;
+                
+                case ORACLE:
+                    Class.forName("oracle.jdbc.OracleDriver");
+                    mDBEngine.EstablishConnection();
+                    statement = mDBEngine.getConnection().createStatement();                    
+                    isConnected = true;
+                    break;
+                    
+                case DERBY:
+                    Class.forName("com.ibm.db2.jcc.DB2Driver");
+                    mDBEngine.EstablishConnection();
+                    statement = mDBEngine.getConnection().createStatement();                    
+                    isConnected = true;
+                    break;
+                    
+                default:                   
+                     mDBEngine.EstablishConnection();  
+                     statement = mDBEngine.getConnection().createStatement();
+                     isConnected = true;
+                    break;
+            }
+            
+        } catch (SQLException e) {
+                log.error("Error establishing connection to database for driver " + getSqlSourceUtils().getDriverName());
+                isConnected = false;
+                e.printStackTrace();
+        } catch (ClassNotFoundException e){
+                log.error("Error resgistering dinamic load driver " + getSqlSourceUtils().getDriverName());
+                isConnected = false;
+                e.printStackTrace();
+        }
+        return isConnected;
+    }
 }

@@ -1,20 +1,23 @@
 package org.apache.flume.source;
 
 import java.sql.DriverManager;
+import java.sql.Statement;
+import java.sql.ResultSet;
+import java.sql.Connection;
 import java.sql.SQLException;
-
-import com.mysql.jdbc.MySQLConnection;
 
 /**
  * Sets up connection to database.
- * @author david
+ * @author Luis Lázaro
  *
  */
-public class MySqlDBEngine  {
+public class SqlDBEngine  {
 	private String mURL;
 	private String mUser;
 	private String mPassword;
-	private MySQLConnection mConnection;
+	private Connection mConnection;
+        private Statement mStatement;
+        private ResultSet mResultSet;
 	
 	/**
 	 * Constructor to set the URL, Username, and Password for the DB.
@@ -22,18 +25,22 @@ public class MySqlDBEngine  {
 	 * @param Username
 	 * @param Password
 	 */
-	public MySqlDBEngine(String URL, String Username, String Password){
+	public SqlDBEngine(String URL, String Username, String Password){
 		this.mURL = URL;
 		this.mUser = Username;
 		this.mPassword = Password;
 	}
+        
+        public SqlDBEngine(String URL){
+                this.mURL= URL;
+        }
 	
 	/**
 	 * Establishes the database connection.
 	 * @throws SQLException
 	 */
 	public void EstablishConnection() throws SQLException{
-		mConnection = (MySQLConnection) DriverManager.getConnection(this.mURL, this.mUser, this.mPassword);
+		mConnection =  DriverManager.getConnection(this.mURL, this.mUser, this.mPassword);
 	}
 	
 	/**
@@ -48,8 +55,14 @@ public class MySqlDBEngine  {
 	 * Retrieves the current connection.
 	 * @return
 	 */
-	public MySQLConnection getConnection(){
+	public Connection getConnection(){
 		return this.mConnection;
 	}
-
+        
+        /*
+        @retrun Resultset 
+        */
+        public ResultSet runQuery(String mQuery, Statement statement) throws SQLException{
+		return statement.executeQuery(mQuery);
+	}
 }

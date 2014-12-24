@@ -3,7 +3,7 @@
   <groupId>org.apache.flume.flume-ng-sources</groupId>
   <artifactId>flume-ng-sql-source</artifactId>
   <version>0.8</version>
-  <build>
+  <!-- <build>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -50,6 +50,9 @@
 					<exclude>org.apache.httpcomponents:httpcore</exclude>
 					<exclude>commons-logging:commons-logging</exclude>
 					<exclude>org.apache.mina:mina-core</exclude>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
                 </excludes>
               </artifactSet>
 	        </configuration>
@@ -57,7 +60,7 @@
         </executions>
       </plugin>
     </plugins>
-  </build>
+  </build> -->
   <dependencies>
     <dependency>
     	<groupId>org.apache.flume</groupId>
@@ -69,5 +72,28 @@
 		<artifactId>mysql-connector-java</artifactId>
 		<version>5.1.18</version>
 	</dependency>
+        <dependency>
+                <groupId>postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>8.3-606.jdbc4</version>
+        </dependency>
+        <dependency>
+                <groupId>org.xerial</groupId>
+                <artifactId>sqlite-jdbc</artifactId>
+                <version>3.6.20</version>
+        </dependency>
+        <dependency>   
+                <groupId>com.microsoft.sqlserver</groupId>   
+                <artifactId>sqljdbc4</artifactId>   
+                <version>4.0</version>  
+        </dependency>
+        <dependency>
+			<groupId>com.oracle</groupId>
+			<artifactId>ojdbc7</artifactId>
+			<version>12.1.0.1</version>
+        </dependency>
+                 
+
   </dependencies>
 </project>
+
