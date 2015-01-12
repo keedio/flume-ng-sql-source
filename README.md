@@ -9,14 +9,11 @@ Current sql database engines supported
 - MySQL
 - PostgreSQL
 - SQLite
+- Microsoft SQLServer
 
 On development databases
 ------------------------
 - Oracle
-- Derby
-- Microsoft SQLServer
-- DB2
-- Sysbase IQ
 
 Compilation and packaging
 ----------
