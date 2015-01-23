@@ -36,6 +36,8 @@ import org.apache.flume.source.AbstractSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.flume.instrumentation.SourceCounter;
+import org.apache.flume.instrumentation.SinkCounter;
 
 
 
@@ -63,14 +65,18 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     private boolean isConnected;
     private JdbcDriver driver;
     private Statement statement;
-    
+    private SourceCounter sourceCounter;
+    private SinkCounter sinkCounter;
        
     @Override
     public void configure(Context context) {
               
         log.info("Reading and processing configuration values for source " + getName());
         sqlSourceUtils = new SQLSourceUtils(context);
-        
+        sourceCounter = new SourceCounter("SOURCE." + getName());
+        sinkCounter = new SinkCounter("SINK." + getName());
+        sourceCounter.start();
+        sinkCounter.start();
         mDBEngine = new SqlDBEngine(sqlSourceUtils.getConnectionURL(),
                                     sqlSourceUtils.getUserDataBase(),
                                     sqlSourceUtils.getPasswordDatabase());
@@ -122,6 +128,9 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                         event.setBody(message);
                         event.setHeaders(headers);
                         getChannelProcessor().processEvent(event);
+                        sourceCounter.incrementEventReceivedCount();
+                        sinkCounter.incrementEventDrainAttemptCount();
+                        sinkCounter.incrementEventDrainAttemptCount();
 
                     }
                     
@@ -188,6 +197,8 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                     super.stop();
                     e.printStackTrace();
             }
+            sourceCounter.stop();
+            sinkCounter.stop();
             super.stop();
     }
 
