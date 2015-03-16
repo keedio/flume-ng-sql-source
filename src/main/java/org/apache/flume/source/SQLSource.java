@@ -66,7 +66,6 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     private JdbcDriver driver;
     private Statement statement;
     private SourceCounter sourceCounter;
-    private SinkCounter sinkCounter;
        
     @Override
     public void configure(Context context) {
@@ -74,9 +73,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         log.info("Reading and processing configuration values for source " + getName());
         sqlSourceUtils = new SQLSourceUtils(context);
         sourceCounter = new SourceCounter("SOURCE." + getName());
-        sinkCounter = new SinkCounter("SINK." + getName());
         sourceCounter.start();
-        sinkCounter.start();
         mDBEngine = new SqlDBEngine(sqlSourceUtils.getConnectionURL(),
                                     sqlSourceUtils.getUserDataBase(),
                                     sqlSourceUtils.getPasswordDatabase());
@@ -99,7 +96,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 
             try
             {
-                    String where = " WHERE " + sqlSourceUtils.getIncrementalColumnName() + ">" + sqlSourceUtils.getStatusFileIncrement();
+                    String where = " WHERE " + sqlSourceUtils.getIncrementalColumnName() + ">" + sqlSourceUtils.getCurrentIncrementalValue();
                     String query = "SELECT " + sqlSourceUtils.getColumnsToSelect() + " FROM " + sqlSourceUtils.getTable() + where + 
                                    " ORDER BY "+ sqlSourceUtils.getIncrementalColumnName() + ";";
 
@@ -129,8 +126,6 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                         event.setHeaders(headers);
                         getChannelProcessor().processEvent(event);
                         sourceCounter.incrementEventReceivedCount();
-                        sinkCounter.incrementEventDrainAttemptCount();
-                        sinkCounter.incrementEventDrainAttemptCount();
 
                     }
                     
@@ -198,7 +193,6 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                     e.printStackTrace();
             }
             sourceCounter.stop();
-            sinkCounter.stop();
             super.stop();
     }
 
@@ -243,7 +237,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                 case SQLSERVER:
                     Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");                    
                     mDBEngine.EstablishConnection();
-                    statement = mDBEngine.getConnection().createStatement();
+                    statement = mDBEngine.getConnection().createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                     isConnected = true;
                     break;
                 
