@@ -14,6 +14,12 @@ Current sql database engines supported
 On development databases
 ------------------------
 - Oracle
+<<<<<<< HEAD
+- Derby
+- DB2
+- Sysbase IQ
+=======
+>>>>>>> master
 
 Compilation and packaging
 ----------
