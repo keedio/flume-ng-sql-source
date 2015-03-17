@@ -36,8 +36,8 @@ import org.apache.flume.source.AbstractSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.flume.instrumentation.SourceCounter;
-import org.apache.flume.instrumentation.SinkCounter;
+
+import org.apache.flume.metrics.SqlSourceCounter;
 
 
 
@@ -65,15 +65,15 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     private boolean isConnected;
     private JdbcDriver driver;
     private Statement statement;
-    private SourceCounter sourceCounter;
+    private SqlSourceCounter sqlSourceCounter;
        
     @Override
     public void configure(Context context) {
               
         log.info("Reading and processing configuration values for source " + getName());
         sqlSourceUtils = new SQLSourceUtils(context);
-        sourceCounter = new SourceCounter("SOURCE." + getName());
-        sourceCounter.start();
+        sqlSourceCounter = new SqlSourceCounter("SOURCESQL." + this.getName());
+        sqlSourceCounter.start();
         mDBEngine = new SqlDBEngine(sqlSourceUtils.getConnectionURL(),
                                     sqlSourceUtils.getUserDataBase(),
                                     sqlSourceUtils.getPasswordDatabase());
@@ -110,6 +110,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                     
                     //retrieve each row from resultset
                     while(queryResult.next()){
+                        sqlSourceCounter.incrementRowsCount();
                         queryResultRow ="";
 
                         for(int i = 1; i <= mNumColumns-1; i++){
@@ -125,7 +126,8 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                         event.setBody(message);
                         event.setHeaders(headers);
                         getChannelProcessor().processEvent(event);
-                        sourceCounter.incrementEventReceivedCount();
+                        sqlSourceCounter.incrementEventCount();
+                        sqlSourceCounter.incrementRowsProc();
 
                     }
                     
@@ -172,7 +174,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
  
     public void start(Context context) {
             log.info("Starting sql source {} ...", getName());
-        super.start();	    
+        super.start();
     }
 
     @Override
@@ -192,7 +194,8 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                     super.stop();
                     e.printStackTrace();
             }
-            sourceCounter.stop();
+           // sourceCounter.stop();
+            this.sqlSourceCounter.stop();
             super.stop();
     }
 

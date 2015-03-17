@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.flume.flume-ng-sources</groupId>
   <artifactId>flume-ng-sql-source</artifactId>
-  <version>0.8.2</version>
+  <version>0.8.3</version>
   <dependencies>
     <dependency>
     	<groupId>org.apache.flume</groupId>
