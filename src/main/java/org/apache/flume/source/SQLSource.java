@@ -161,12 +161,12 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
             catch(SQLException e)
             {
                     log.error("SQL exception, check if query for source " + getName() + " is correctly constructed");
-                    e.printStackTrace();
+                    
                     return Status.BACKOFF;
             }
             catch(InterruptedException e)
             {
-                    e.printStackTrace();
+                    log.error("Interruptedexception", e);
                     return Status.BACKOFF;			
             }
     }
@@ -192,9 +192,8 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
             } catch (SQLException e) {
                     log.error("Error closing database connection " + sqlSourceUtils.getConnectionURL());
                     super.stop();
-                    e.printStackTrace();
+                    
             }
-           // sourceCounter.stop();
             this.sqlSourceCounter.stop();
             super.stop();
     }
@@ -268,11 +267,11 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         } catch (SQLException e) {
                 log.error("Error establishing connection to database for driver " + getSqlSourceUtils().getDriverName());
                 isConnected = false;
-                e.printStackTrace();
+                
         } catch (ClassNotFoundException e){
                 log.error("Error resgistering dinamic load driver " + getSqlSourceUtils().getDriverName());
                 isConnected = false;
-                e.printStackTrace();
+                
         }
         return isConnected;
     }

@@ -114,7 +114,7 @@ public class SQLSourceUtils {
 			return -1;
 		}catch (IOException e){
 			log.error("Error reading incremental value from status file!!!");
-			e.printStackTrace();
+			
 			return -1;
 		}
 	}
@@ -131,7 +131,7 @@ public class SQLSourceUtils {
 			writer.close();
 		}catch (IOException e) {
 			log.error("Error writing incremental value to status file!!!");
-			e.printStackTrace();
+			
 		}
 	}
         
