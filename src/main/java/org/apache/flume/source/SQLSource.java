@@ -94,14 +94,21 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     	byte[] message;
     	Event event;
     	Map<String, String> headers;
+    	String query;
 
     	try
     	{
-    		String where = " WHERE " + sqlSourceUtils.getIncrementalColumnName() + ">" 
-    				+ sqlSourceUtils.getCurrentIncrementalValue();
-    		String query = "SELECT " + sqlSourceUtils.getColumnsToSelect() + " FROM " 
-    				+ sqlSourceUtils.getTable() + where + " ORDER BY "
-    				+ sqlSourceUtils.getIncrementalColumnName() + ";";
+    		
+    		if (sqlSourceUtils.getCustomQuery() == null){
+        		String where = " WHERE " + sqlSourceUtils.getIncrementalColumnName() + ">" 
+    					+ sqlSourceUtils.getCurrentIncrementalValue();
+    			query = "SELECT " + sqlSourceUtils.getColumnsToSelect() + " FROM " 
+    					+ sqlSourceUtils.getTable() + where + " ORDER BY "
+    					+ sqlSourceUtils.getIncrementalColumnName() + ";";
+    		}
+    		else{
+    			query = sqlSourceUtils.getCustomQuery();
+    		}
 
     		log.info("Query: " + query);
     		ResultSet queryResult = mDBEngine.runQuery(query,this.statement);
@@ -109,7 +116,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     		ResultSetMetaData mMetaData = queryResult.getMetaData();
     		int mNumColumns = mMetaData.getColumnCount();
                     
-    		//retrieve each row from resultset
+    		//retrieve each row from resultSet
     		while(queryResult.next()){
     			sqlSourceCounter.incrementRowsCount();
     			queryResultRow ="";
@@ -129,7 +136,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     			sqlSourceCounter.incrementEventCount();
     			sqlSourceCounter.incrementRowsProc();
     		}
-    		//A TYPE_FORWARD_ONLY ResultSet doesnot support method last() , among others.
+    		//A TYPE_FORWARD_ONLY ResultSet doesn't support method last() , among others.
     		if (!(this.sqlSourceUtils.getDriverName().equals("sqlite"))){
     			if ( queryResult.last())
     			{
