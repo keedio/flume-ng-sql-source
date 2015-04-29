@@ -32,13 +32,23 @@ Copy flume-ng-sql-source-0.8.jar in target folder into flume plugins dir folder
 ### Specific installation by database engine
 
 ##### MySQL
-TODO
+Download the official mysql jdbc driver and copy in libext flume plugins directory:
+```
+$ wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.35.tar.gz
+$ tar xzf mysql-connector-java-5.1.35.tar.gz
+$ cp mysql-connector-java-5.1.35-bin.jar $FLUME_HOME/plugins.d/lib/sql-source/libext
+```
 ##### Oracle
 TODO
 ##### Derby
 TODO
 ##### Microsoft SQLServer
-TODO
+Download the official Microsoft 4.1 Sql Server jdbc driver and copy in libext flume plugins directory:  
+Download URL: https://www.microsoft.com/es-es/download/details.aspx?id=11774  
+```
+$ tar xzf sqljdbc_4.1.5605.100_enu.tar.gz
+$ cp sqljdbc_4.1/enu/sqljdbc41.jar $FLUME_HOME/plugins.d/lib/sql-source/libext
+```
 ##### DB2
 TODO
 ##### Sysbase IQ
@@ -47,10 +57,10 @@ TODO
 Configuration of SQL Source:
 ----------
 
-```
+```properties
 
 agent.sources = sql-source
-agent.sources.sql-source.type = org.apache.flume.source.SQLSource  
+agent.sources.sql-source.type = com.keedio.flume.source.SQLSource  
 
 # URL to connect to database (currently only mysql is supported)
 agent.sources.sql-source.connection.url = jdbc:mysql://host:port/database
@@ -59,6 +69,7 @@ agent.sources.sql-source.connection.url = jdbc:mysql://host:port/database
 agent.sources.sql-source.user = username  
 agent.sources.sql-source.password = userpassword  
 agent.sources.sql-source.table = table  
+agent.sources.sql-source.database = database
 
 # Columns to import to kafka (default * import entire row)
 agent.sources.sql-source.columns.to.select = *  
@@ -74,6 +85,14 @@ agent.sources.sql-source.run.query.delay=10000
 # Status file is used to save last readed row
 agent.sources.sql-source.status.file.path = /var/lib/flume
 agent.sources.sql-source.status.file.name = sql-source.status
+
+# Custom query
+agent.sources.sql-source.status.custom.query = SELECT * FROM table WHERE something AND @;
+agent.sources.sql-source.status.batch.size = 1000;
+agent.sources.sql-source.status.max.rows = 10000;
+
+
+# 
 
 ```
 
