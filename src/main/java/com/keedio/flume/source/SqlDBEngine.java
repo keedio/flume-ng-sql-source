@@ -1,4 +1,4 @@
-package org.apache.flume.source;
+package com.keedio.flume.source;
 
 import java.sql.DriverManager;
 import java.sql.Statement;

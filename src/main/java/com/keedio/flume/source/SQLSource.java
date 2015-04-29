@@ -16,16 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  *******************************************************************************/
-package org.apache.flume.source;
+package com.keedio.flume.source;
 
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.apache.flume.conf.ConfigurationException;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
@@ -36,8 +39,7 @@ import org.apache.flume.source.AbstractSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
-import org.apache.flume.metrics.SqlSourceCounter;
+import com.keedio.flume.metrics.SqlSourceCounter;
 
 
 
@@ -68,10 +70,10 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     private SqlSourceCounter sqlSourceCounter;
        
     @Override
-    public void configure(Context context) {
-              
-        log.info("Reading and processing configuration values for source " + getName());
-        sqlSourceUtils = new SQLSourceUtils(context);
+    public void configure(Context context) throws ConfigurationException{
+        	
+    	log.info("Reading and processing configuration values for source " + getName());
+		sqlSourceUtils = new SQLSourceUtils(context);
         sqlSourceCounter = new SqlSourceCounter("SOURCESQL." + this.getName());
         sqlSourceCounter.start();
         mDBEngine = new SqlDBEngine(sqlSourceUtils.getConnectionURL(),
@@ -84,7 +86,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         if (loadDriver(sqlSourceUtils.getDriverName())) {
             log.info("Source " + getName() + " Connected to " + sqlSourceUtils.getDataBase());
         } else {
-            log.error("Error loading driver " + getSqlSourceUtils().getDriverName());
+        	throw new ConfigurationException("Error loading driver " + getSqlSourceUtils().getDriverName());
         }
         
     } //end configure
@@ -95,20 +97,12 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     	Event event;
     	Map<String, String> headers;
     	String query;
-
+    	int batchSize = sqlSourceUtils.getBatchSize();
+		List<Event> events = new ArrayList<Event>();
+		
     	try
     	{
-    		
-    		if (sqlSourceUtils.getCustomQuery() == null){
-        		String where = " WHERE " + sqlSourceUtils.getIncrementalColumnName() + ">" 
-    					+ sqlSourceUtils.getCurrentIncrementalValue();
-    			query = "SELECT " + sqlSourceUtils.getColumnsToSelect() + " FROM " 
-    					+ sqlSourceUtils.getTable() + where + " ORDER BY "
-    					+ sqlSourceUtils.getIncrementalColumnName() + ";";
-    		}
-    		else{
-    			query = sqlSourceUtils.getCustomQuery();
-    		}
+    		query = SQLQueryBuilder.buildQuery(sqlSourceUtils);
 
     		log.info("Query: " + query);
     		ResultSet queryResult = mDBEngine.runQuery(query,this.statement);
@@ -121,8 +115,8 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     			sqlSourceCounter.incrementRowsCount();
     			queryResultRow ="";
 
-    			for(int i = 1; i <= mNumColumns-1; i++){
-    				queryResultRow = queryResultRow + queryResult.getString(i) +",";
+    			for(int j = 1; j <= mNumColumns-1; j++){
+    				queryResultRow = queryResultRow + queryResult.getString(j) +",";
     			}
 
     			queryResultRow = queryResultRow + queryResult.getString(mNumColumns);
@@ -132,12 +126,24 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     			headers.put("timestamp", String.valueOf(System.currentTimeMillis()));
     			event.setBody(message);
     			event.setHeaders(headers);
-    			getChannelProcessor().processEvent(event);
     			sqlSourceCounter.incrementEventCount();
     			sqlSourceCounter.incrementRowsProc();
+    		
+    			if (events.size()<batchSize){
+    				events.add(event);
+    			}else{	
+    				getChannelProcessor().processEventBatch(events);
+    				events.clear();
+    			}
     		}
+    		if (!events.isEmpty()){
+    			getChannelProcessor().processEventBatch(events);
+				events.clear();
+    		}
+		
     		//A TYPE_FORWARD_ONLY ResultSet doesn't support method last() , among others.
-    		if (!(this.sqlSourceUtils.getDriverName().equals("sqlite"))){
+    		//TODO: Check this how it's working with sqlite
+    		if (!(sqlSourceUtils.getDriverName().equals("sqlite"))){
     			if ( queryResult.last())
     			{
     				sqlSourceUtils.setCurrentIncrementalValue(Long.parseLong(
@@ -149,10 +155,10 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     			} 
     		} else {
     			ResultSet r = statement.executeQuery("SELECT COUNT(*) AS rowcount FROM " 
-    		+ this.sqlSourceUtils.getTable() + ";");
+    					+ sqlSourceUtils.getTable() + ";");
     			r.next();
     			int count = r.getInt("rowcount");
-    			if (count > this.sqlSourceUtils.getStatusFileIncrement()){
+    			if (count > sqlSourceUtils.getStatusFileIncrement()){
     				sqlSourceUtils.setCurrentIncrementalValue(Long.parseLong(queryResult.getString(1),10));
     				
     				log.info("Last row increment value readed: " + sqlSourceUtils.getIncrementalValue() 
@@ -161,15 +167,20 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     			}
     			r.close();
     		}
-
-    		Thread.sleep(sqlSourceUtils.getRunQueryDelay());				
+    		
+    		// if queryResult size is equals to maxRows
+    		if (queryResult.getRow() < 1000){
+    			Thread.sleep(sqlSourceUtils.getRunQueryDelay());
+    		}
+    		
+    	
     		return Status.READY;
     	}
     	
     	catch(SQLException e)
     	{
     		log.error("SQL exception, check if query for source " + getName() + " is correctly constructed");
-                    
+            log.error(e.getMessage(),e);        
     		return Status.BACKOFF;
             }
             catch(InterruptedException e)
@@ -269,20 +280,22 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                     isConnected = true;
                     break;
                     
-                default:                   
-                     mDBEngine.EstablishConnection();  
-                     statement = mDBEngine.getConnection().createStatement();
-                     isConnected = true;
+                default:
+                	log.info("Mierda de codigo coño");
+                    mDBEngine.EstablishConnection();  
+                    statement = mDBEngine.getConnection().createStatement();
+                    isConnected = true;
                     break;
             }
             
         } catch (SQLException e) {
-                log.error("Error establishing connection to database for driver " 
-                		+ getSqlSourceUtils().getDriverName());
+                log.error("Error establishing connection to database for driver {}: {}", 
+                		getSqlSourceUtils().getDriverName(), e.getMessage());
                 isConnected = false;
                 
         } catch (ClassNotFoundException e){
-                log.error("Error resgistering dinamic load driver " + getSqlSourceUtils().getDriverName());
+                log.error("Error resgistering dinamic load driver {}: {}",
+                		getSqlSourceUtils().getDriverName(), e.getMessage());
                 isConnected = false;
                 
         }

@@ -1,10 +1,12 @@
-package org.apache.flume.source;
+package com.keedio.flume.source;
 
 
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+
+import org.apache.flume.conf.ConfigurationException;
 
 import org.apache.flume.Context;
 import org.slf4j.Logger;
@@ -23,33 +25,39 @@ public class SQLSourceUtils {
 	private String statusFilePath, statusFileName, connectionURL, table,
                        incrementalColumnName,columnsToSelect,user,password,driverName,
                        database,customQuery;
-	private int runQueryDelay;
+	private int runQueryDelay,batchSize,maxRows;
 	private long incrementalValue;
 	private File file,directory;
 	private FileWriter writer;
-	private final String defaultDirectory = "/var/lib/flume";
+	private static final String DEFAULT_STATUS_DIRECTORY = "/var/lib/flume";
 	
-	public SQLSourceUtils(Context context) {
-		statusFilePath = context.getString("status.file.path", defaultDirectory);
+	public SQLSourceUtils(Context context) throws ConfigurationException {
+		statusFilePath = context.getString("status.file.path", DEFAULT_STATUS_DIRECTORY);
 		statusFileName = context.getString("status.file.name");
 		connectionURL = context.getString("connection.url");
 		table = context.getString("table");
 		database = context.getString("database");
 		incrementalColumnName = context.getString("incremental.column.name");
-		columnsToSelect = context.getString("columns.to.select");
-		runQueryDelay = context.getInteger("run.query.delay");
-		incrementalValue = context.getLong("incremental.value");
+		columnsToSelect = context.getString("columns.to.select","*");
+		runQueryDelay = context.getInteger("run.query.delay",10000);
+		incrementalValue = context.getLong("incremental.value",0L);
 		user = context.getString("user");
 		password = context.getString("password");
 		directory = new File(getStatusFilePath());
-		customQuery = context.getString("customQuery");
+		customQuery = context.getString("custom.query");
+		batchSize = context.getInteger("batch.size",100);
+		maxRows = context.getInteger("max.rows",10000);
+		
+		setDriverNameFromURL();
+		
+		checkMandatoryProperties();
                 
 		if (!(isStatusDirectoryCreated())) {
 			createDirectory();
 		}
 		file = new File(getStatusFilePath()+"/"+getStatusFileName());
 	}
-	
+
 	public long getCurrentIncrementalValue(){
 
 		if (!isStatusFileCreated()){
@@ -133,6 +141,30 @@ public class SQLSourceUtils {
 		}catch (IOException e) {
 			log.error("Error writing incremental value to status file!!!");
 			
+		}
+	}
+	
+	private void checkMandatoryProperties() throws ConfigurationException {
+		if (getStatusFileName() == null){
+			throw new ConfigurationException("status.file.name property not set");
+		}
+		if (getConnectionURL() == null){
+			throw new ConfigurationException("connection.url property not set");
+		}
+		if (getTable() == null && getCustomQuery() == null){
+			throw new ConfigurationException("property table not set");
+		}
+		if (getDataBase() == null){
+			throw new ConfigurationException("database property not set");
+		}
+		if (getIncrementalColumnName() == null){
+			throw new ConfigurationException("incremental.column.name  property not set");
+		}
+		if (getPasswordDatabase() == null){
+			throw new ConfigurationException("password property not set");
+		}
+		if (getUserDataBase() == null){
+			throw new ConfigurationException("user property not set");
 		}
 	}
         
@@ -301,14 +333,6 @@ public class SQLSourceUtils {
 	 * return String driver name jdbc
 	 */
 	public String getDriverName() {
-		String[] stringsURL = connectionURL.split(":");
-		if (stringsURL[0].equals("jdbc")) {
-			driverName = stringsURL[1];
-		} else {
-			log.info("Error: impossible to get driver name from  "
-					+ getConnectionURL());
-			driverName = "unknown";
-		}
 		return driverName;
 	}
 
@@ -318,4 +342,33 @@ public class SQLSourceUtils {
 	public String getDataBase() {
 		return database;
 	}
+	
+	public int getBatchSize() {
+		return batchSize;
+	}
+
+	public void setBatchSize(int batchSize) {
+		this.batchSize = batchSize;
+	}
+
+	public int getMaxRows() {
+		return maxRows;
+	}
+
+	public void setMaxRows(int maxRows) {
+		this.maxRows = maxRows;
+	}
+	
+	private void setDriverNameFromURL() {
+		String[] stringsURL = connectionURL.split(":");
+		if (stringsURL[0].equals("jdbc")) {
+			driverName = stringsURL[1];
+			log.info("SQL Driver name: "+driverName);
+		} else {
+			log.warn("Error: impossible to get driver name from  "
+					+ getConnectionURL());
+			driverName = "unknown";
+		}
+	}
+	
 }
