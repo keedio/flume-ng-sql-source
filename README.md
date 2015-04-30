@@ -75,6 +75,17 @@ Mandatory properties in <b>bold</b>
 | max.rows | 10000| Max rows to import per query |
 | custom.query | - | Custom query to force a special request to the DB, be carefull. Check below explanation of this property. |
 
+Custom Query
+-------------
+A custom query is supported to bring the possibility of use entire SQL languaje. This is powerfull, but risky, be carefull with the custom queries.
+To use is needed an special character '@' to indicate where the incremental value should be.
+Example:
+```
+agent.sources.sql-source.custom.query = SELECT field1,field2 FROM table1 WHERE field1='test' AND @ ORDER BY field2;
+```
+Will run the query:  
+```SELECT field1,field2 FROM table1 WHERE field1='test' AND incrementalColumn > 0 ORDER BY field2;```
+
 Configuration example
 --------------------
 
