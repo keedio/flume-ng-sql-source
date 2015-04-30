@@ -79,13 +79,13 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                                     sqlSourceUtils.getUserDataBase(),
                                     sqlSourceUtils.getPasswordDatabase());
         
-        log.info("Establishing connection to database " + sqlSourceUtils.getDataBase() 
+        log.info("Establishing connection to " + sqlSourceUtils.getConnectionURL() 
         		+ " for source  " + getName());
        
         if (loadDriver(sqlSourceUtils.getDriverName())) {
-            log.info("Source " + getName() + " Connected to " + sqlSourceUtils.getDataBase());
+            log.info("Source " + getName() + " CONNECTED to database");
         } else {
-        	throw new ConfigurationException("Error loading driver " + getSqlSourceUtils().getDriverName());
+        	throw new ConfigurationException("Error loading driver " + sqlSourceUtils.getDriverName());
         }
         
     } //end configure
@@ -215,13 +215,6 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
             this.sqlSourceCounter.stop();
             super.stop();
     }
-
-    /*
-    @return SQLSourceUtils
-    */
-    public SQLSourceUtils getSqlSourceUtils(){
-        return sqlSourceUtils;
-    }
     
     /*
     @return boolean driver register itself in DriverManager
@@ -289,12 +282,12 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
             
         } catch (SQLException e) {
                 log.error("Error establishing connection to database for driver {}: {}", 
-                		getSqlSourceUtils().getDriverName(), e.getMessage());
+                		sqlSourceUtils.getDriverName(), e.getMessage());
                 isConnected = false;
                 
         } catch (ClassNotFoundException e){
                 log.error("Error resgistering dinamic load driver {}: {}",
-                		getSqlSourceUtils().getDriverName(), e.getMessage());
+                		sqlSourceUtils.getDriverName(), e.getMessage());
                 isConnected = false;
                 
         }

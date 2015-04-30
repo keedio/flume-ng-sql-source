@@ -24,7 +24,7 @@ public class SQLSourceUtils {
 	private static final Logger log = LoggerFactory.getLogger(SQLSourceUtils.class);
 	private String statusFilePath, statusFileName, connectionURL, table,
                        incrementalColumnName,columnsToSelect,user,password,driverName,
-                       database,customQuery;
+                       customQuery;
 	private int runQueryDelay,batchSize,maxRows;
 	private long incrementalValue;
 	private File file,directory;
@@ -36,7 +36,6 @@ public class SQLSourceUtils {
 		statusFileName = context.getString("status.file.name");
 		connectionURL = context.getString("connection.url");
 		table = context.getString("table");
-		database = context.getString("database");
 		incrementalColumnName = context.getString("incremental.column.name");
 		columnsToSelect = context.getString("columns.to.select","*");
 		runQueryDelay = context.getInteger("run.query.delay",10000);
@@ -153,9 +152,6 @@ public class SQLSourceUtils {
 		}
 		if (getTable() == null && getCustomQuery() == null){
 			throw new ConfigurationException("property table not set");
-		}
-		if (getDataBase() == null){
-			throw new ConfigurationException("database property not set");
 		}
 		if (getIncrementalColumnName() == null){
 			throw new ConfigurationException("incremental.column.name  property not set");
@@ -334,13 +330,6 @@ public class SQLSourceUtils {
 	 */
 	public String getDriverName() {
 		return driverName;
-	}
-
-	/*
-	 * @return String data base name
-	 */
-	public String getDataBase() {
-		return database;
 	}
 	
 	public int getBatchSize() {
