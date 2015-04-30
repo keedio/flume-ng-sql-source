@@ -16,16 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  *******************************************************************************/
-package org.apache.flume.source;
+package org.keedio.flume.source;
 
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.apache.flume.conf.ConfigurationException;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
@@ -33,11 +36,9 @@ import org.apache.flume.PollableSource;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.event.SimpleEvent;
 import org.apache.flume.source.AbstractSource;
+import org.keedio.flume.metrics.SqlSourceCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-
-import org.apache.flume.metrics.SqlSourceCounter;
 
 
 
@@ -68,105 +69,122 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     private SqlSourceCounter sqlSourceCounter;
        
     @Override
-    public void configure(Context context) {
-              
-        log.info("Reading and processing configuration values for source " + getName());
-        sqlSourceUtils = new SQLSourceUtils(context);
+    public void configure(Context context) throws ConfigurationException{
+        	
+    	log.info("Reading and processing configuration values for source " + getName());
+		sqlSourceUtils = new SQLSourceUtils(context);
         sqlSourceCounter = new SqlSourceCounter("SOURCESQL." + this.getName());
         sqlSourceCounter.start();
         mDBEngine = new SqlDBEngine(sqlSourceUtils.getConnectionURL(),
                                     sqlSourceUtils.getUserDataBase(),
                                     sqlSourceUtils.getPasswordDatabase());
         
-        log.info("Establishing connection to database " + sqlSourceUtils.getDataBase() + " for source  "  + getName());
+        log.info("Establishing connection to " + sqlSourceUtils.getConnectionURL() 
+        		+ " for source  " + getName());
        
         if (loadDriver(sqlSourceUtils.getDriverName())) {
-            log.info("Source " + getName() + " Connected to " + sqlSourceUtils.getDataBase()  );
+            log.info("Source " + getName() + " CONNECTED to database");
         } else {
-            log.error("Error loading driver " + getSqlSourceUtils().getDriverName());
+        	throw new ConfigurationException("Error loading driver " + sqlSourceUtils.getDriverName());
         }
         
     } //end configure
     
     
     public Status process() throws EventDeliveryException {
-            byte[] message;
-            Event event;
-            Map<String, String> headers;
+    	byte[] message;
+    	Event event;
+    	Map<String, String> headers;
+    	String query;
+    	int batchSize = sqlSourceUtils.getBatchSize();
+		List<Event> events = new ArrayList<Event>();
+		
+    	try
+    	{
+    		query = SQLQueryBuilder.buildQuery(sqlSourceUtils);
 
-            try
-            {
-                    String where = " WHERE " + sqlSourceUtils.getIncrementalColumnName() + ">" + sqlSourceUtils.getCurrentIncrementalValue();
-                    String query = "SELECT " + sqlSourceUtils.getColumnsToSelect() + " FROM " + sqlSourceUtils.getTable() + where + 
-                                   " ORDER BY "+ sqlSourceUtils.getIncrementalColumnName() + ";";
-
-                    log.info("Query: " + query);
-                   
+    		log.info("Query: " + query);
+    		ResultSet queryResult = mDBEngine.runQuery(query,this.statement);
+    		String queryResultRow;
+    		ResultSetMetaData mMetaData = queryResult.getMetaData();
+    		int mNumColumns = mMetaData.getColumnCount();
                     
-                    ResultSet queryResult = mDBEngine.runQuery(query,this.statement);
-                    String queryResultRow;
-                    ResultSetMetaData mMetaData = queryResult.getMetaData();
-                    int mNumColumns = mMetaData.getColumnCount();
-                    
-                    //retrieve each row from resultset
-                    while(queryResult.next()){
-                        sqlSourceCounter.incrementRowsCount();
-                        queryResultRow ="";
+    		//retrieve each row from resultSet
+    		while(queryResult.next()){
+    			sqlSourceCounter.incrementRowsCount();
+    			queryResultRow ="";
 
-                        for(int i = 1; i <= mNumColumns-1; i++){
-                                queryResultRow = queryResultRow + queryResult.getString(i) +",";
-                        }
+    			for(int j = 1; j <= mNumColumns-1; j++){
+    				queryResultRow = queryResultRow + queryResult.getString(j) +",";
+    			}
 
-                        queryResultRow = queryResultRow + queryResult.getString(mNumColumns);
-
-                        message = queryResultRow.getBytes();
-                        event = new SimpleEvent();
-                        headers = new HashMap<String, String>();
-                        headers.put("timestamp", String.valueOf(System.currentTimeMillis()));
-                        event.setBody(message);
-                        event.setHeaders(headers);
-                        getChannelProcessor().processEvent(event);
-                        sqlSourceCounter.incrementEventCount();
-                        sqlSourceCounter.incrementRowsProc();
-
-                    }
-                    
-                    //A TYPE_FORWARD_ONLY ResultSet doesnot support method last() , among others.
-                    if (!(this.sqlSourceUtils.getDriverName().equals("sqlite"))){
-                        if ( queryResult.last())
-                        {
-
-                           sqlSourceUtils.setCurrentIncrementalValue(Long.parseLong(queryResult.getString(sqlSourceUtils.getIncrementalColumnName()),10));
-
-                            log.info("Last row increment value readed: " + sqlSourceUtils.getIncrementalValue() + ", updating status file...");
-                            sqlSourceUtils.updateStatusFile(sqlSourceUtils.getIncrementalValue());
-                        } 
-                    } else {
-                        ResultSet r = statement.executeQuery("SELECT COUNT(*) AS rowcount FROM " + this.sqlSourceUtils.getTable() + ";");
-                        r.next();
-                        int count = r.getInt("rowcount");
-                        if (count > this.sqlSourceUtils.getStatusFileIncrement()){
-                            sqlSourceUtils.setCurrentIncrementalValue(Long.parseLong(queryResult.getString(1),10));
-
-                            log.info("Last row increment value readed: " + sqlSourceUtils.getIncrementalValue() + ", updating status file...");
-                            sqlSourceUtils.updateStatusFile(sqlSourceUtils.getIncrementalValue());
-                        }
-                        r.close();
-                    }
-
-                    Thread.sleep(sqlSourceUtils.getRunQueryDelay());				
-        return Status.READY;
-                    }
-
-            catch(SQLException e)
-            {
-                    log.error("SQL exception, check if query for source " + getName() + " is correctly constructed");
-                    e.printStackTrace();
-                    return Status.BACKOFF;
+    			queryResultRow = queryResultRow + queryResult.getString(mNumColumns);
+    			message = queryResultRow.getBytes();
+    			event = new SimpleEvent();
+    			headers = new HashMap<String, String>();
+    			headers.put("timestamp", String.valueOf(System.currentTimeMillis()));
+    			event.setBody(message);
+    			event.setHeaders(headers);
+    			sqlSourceCounter.incrementEventCount();
+    			sqlSourceCounter.incrementRowsProc();
+    		
+    			if (events.size()<batchSize){
+    				events.add(event);
+    			}else{	
+    				getChannelProcessor().processEventBatch(events);
+    				events.clear();
+    			}
+    		}
+    		if (!events.isEmpty()){
+    			getChannelProcessor().processEventBatch(events);
+				events.clear();
+    		}
+		
+    		//A TYPE_FORWARD_ONLY ResultSet doesn't support method last() , among others.
+    		//TODO: Check this how it's working with sqlite
+    		if (!(sqlSourceUtils.getDriverName().equals("sqlite"))){
+    			if ( queryResult.last())
+    			{
+    				sqlSourceUtils.setCurrentIncrementalValue(Long.parseLong(
+    						queryResult.getString(sqlSourceUtils.getIncrementalColumnName()),10));
+    				
+    				log.info("Last row increment value readed: " + sqlSourceUtils.getIncrementalValue() 
+    						+ ", updating status file...");
+    				sqlSourceUtils.updateStatusFile(sqlSourceUtils.getIncrementalValue());
+    			} 
+    		} else {
+    			ResultSet r = statement.executeQuery("SELECT COUNT(*) AS rowcount FROM " 
+    					+ sqlSourceUtils.getTable() + ";");
+    			r.next();
+    			int count = r.getInt("rowcount");
+    			if (count > sqlSourceUtils.getStatusFileIncrement()){
+    				sqlSourceUtils.setCurrentIncrementalValue(Long.parseLong(queryResult.getString(1),10));
+    				
+    				log.info("Last row increment value readed: " + sqlSourceUtils.getIncrementalValue() 
+    						+ ", updating status file...");
+    				sqlSourceUtils.updateStatusFile(sqlSourceUtils.getIncrementalValue());
+    			}
+    			r.close();
+    		}
+    		
+    		// if queryResult size is equals to maxRows
+    		if (queryResult.getRow() < 1000){
+    			Thread.sleep(sqlSourceUtils.getRunQueryDelay());
+    		}
+    		
+    	
+    		return Status.READY;
+    	}
+    	
+    	catch(SQLException e)
+    	{
+    		log.error("SQL exception, check if query for source " + getName() + " is correctly constructed");
+            log.error(e.getMessage(),e);        
+    		return Status.BACKOFF;
             }
             catch(InterruptedException e)
             {
-                    e.printStackTrace();
+                    log.error("Interruptedexception", e);
                     return Status.BACKOFF;			
             }
     }
@@ -192,18 +210,10 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
             } catch (SQLException e) {
                     log.error("Error closing database connection " + sqlSourceUtils.getConnectionURL());
                     super.stop();
-                    e.printStackTrace();
+                    
             }
-           // sourceCounter.stop();
             this.sqlSourceCounter.stop();
             super.stop();
-    }
-
-    /*
-    @return SQLSourceUtils
-    */
-    public SQLSourceUtils getSqlSourceUtils(){
-        return sqlSourceUtils;
     }
     
     /*
@@ -213,12 +223,13 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     
     private boolean loadDriver(String driverName)  {
         try {
-            driver = JdbcDriver.valueOf(driverName.toUpperCase());
+        	driver = JdbcDriver.valueOf(driverName.toUpperCase());
             switch(driver){
                 case POSTGRESQL:
                     Class.forName("org.postgresql.Driver");
                     mDBEngine.EstablishConnection();
-                    statement = mDBEngine.getConnection().createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);                    
+                    statement = mDBEngine.getConnection().createStatement(
+                    		ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);                    
                     isConnected = true;
                     break;
                     
@@ -231,16 +242,19 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                 
                 case SQLITE:
                     Class.forName("org.sqlite.JDBC"); 
-                    mDBEngine = new SqlDBEngine(sqlSourceUtils.getConnectionURL()); //sqlite does not support user neither pass
+                    //sqlite does not support user neither pass
+                    mDBEngine = new SqlDBEngine(sqlSourceUtils.getConnectionURL()); 
                     mDBEngine.EstablishConnection();
-                    statement = mDBEngine.getConnection().createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+                    statement = mDBEngine.getConnection().createStatement(
+                    		ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
                     isConnected = true;
                     break;
                     
                 case SQLSERVER:
                     Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");                    
                     mDBEngine.EstablishConnection();
-                    statement = mDBEngine.getConnection().createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                    statement = mDBEngine.getConnection().createStatement(
+                    		ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
                     isConnected = true;
                     break;
                 
@@ -258,21 +272,24 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                     isConnected = true;
                     break;
                     
-                default:                   
-                     mDBEngine.EstablishConnection();  
-                     statement = mDBEngine.getConnection().createStatement();
-                     isConnected = true;
+                default:
+                	log.info("Mierda de codigo coño");
+                    mDBEngine.EstablishConnection();  
+                    statement = mDBEngine.getConnection().createStatement();
+                    isConnected = true;
                     break;
             }
             
         } catch (SQLException e) {
-                log.error("Error establishing connection to database for driver " + getSqlSourceUtils().getDriverName());
+                log.error("Error establishing connection to database for driver {}: {}", 
+                		sqlSourceUtils.getDriverName(), e.getMessage());
                 isConnected = false;
-                e.printStackTrace();
+                
         } catch (ClassNotFoundException e){
-                log.error("Error resgistering dinamic load driver " + getSqlSourceUtils().getDriverName());
+                log.error("Error resgistering dinamic load driver {}: {}",
+                		sqlSourceUtils.getDriverName(), e.getMessage());
                 isConnected = false;
-                e.printStackTrace();
+                
         }
         return isConnected;
     }

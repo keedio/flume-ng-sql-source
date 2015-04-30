@@ -1,5 +1,5 @@
 
-package org.apache.flume.source;
+package org.keedio.flume.source;
 
 /**
  *

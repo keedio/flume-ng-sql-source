@@ -1,4 +1,4 @@
-package org.apache.flume.source;
+package org.keedio.flume.source;
 
 import java.sql.DriverManager;
 import java.sql.Statement;
@@ -16,8 +16,6 @@ public class SqlDBEngine  {
 	private String mUser;
 	private String mPassword;
 	private Connection mConnection;
-        private Statement mStatement;
-        private ResultSet mResultSet;
 	
 	/**
 	 * Constructor to set the URL, Username, and Password for the DB.
@@ -59,10 +57,10 @@ public class SqlDBEngine  {
 		return this.mConnection;
 	}
         
-        /*
-        @retrun Resultset 
-        */
-        public ResultSet runQuery(String mQuery, Statement statement) throws SQLException{
+	/*
+	@return Resultset
+	*/
+	public ResultSet runQuery(String mQuery, Statement statement) throws SQLException{
 		return statement.executeQuery(mQuery);
 	}
 }
