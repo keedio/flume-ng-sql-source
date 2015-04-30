@@ -56,6 +56,27 @@ TODO
 
 Configuration of SQL Source:
 ----------
+Mandatory properties in <b>bold</b>
+
+| Property Name | Default | Description |
+| ----------------------- | :-----: | :---------- |
+| <b>type</b> | - | The component type name, needs to be org.keedio.flume.source.SQLSource  |
+| <b>connection.url</b> | - | Url to connect with the remote Database |
+| <b>user</b> | - | Username to connect with the database |
+| <b>password</b> | - | Password to connect with the database |
+| <b>table</b> | - | Table to export data |
+| <b>incremental.colum.name</b> | - | Autoincremental column name |
+| <b>status.file.name</b> | - | Local file name to save last row number readed |
+| status.file.path | /var/lib/flume | Path to save the status file |
+| incremental.value | 0 | Start value to import data |
+| columns.to.select | * | Wich colums of the table will be selected |
+| run.query.delay | 10000 | ms to wait between run queries |
+| batch.size| 100 | Batch size to send events to flume channel |
+| max.rows | 10000| Max rows to import per query |
+| custom.query | - | Custom query to force a special request to the DB, be carefull. Check below explanation of this property. |
+
+Configuration example
+--------------------
 
 ```properties
 
