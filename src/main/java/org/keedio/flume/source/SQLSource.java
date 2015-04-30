@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  *******************************************************************************/
-package com.keedio.flume.source;
+package org.keedio.flume.source;
 
 
 import java.sql.ResultSet;
@@ -36,10 +36,9 @@ import org.apache.flume.PollableSource;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.event.SimpleEvent;
 import org.apache.flume.source.AbstractSource;
+import org.keedio.flume.metrics.SqlSourceCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.keedio.flume.metrics.SqlSourceCounter;
 
 
 

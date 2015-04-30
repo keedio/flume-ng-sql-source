@@ -1,4 +1,4 @@
-package com.keedio.flume.source;
+package org.keedio.flume.source;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,8 +22,6 @@ public class SQLQueryBuilder {
 		
 		if (sqlUtils.getCustomQuery() == null){
 			
-			/*query = "SELECT " + columns + " FROM " + table + " WHERE " 
-					+ where + " ORDER BY " + incrColumName + ";";*/
 			query = null;
 			
 			switch(driver){

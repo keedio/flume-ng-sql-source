@@ -1,4 +1,4 @@
-package com.keedio.flume.source;
+package org.keedio.flume.source;
 
 
 import java.io.File;

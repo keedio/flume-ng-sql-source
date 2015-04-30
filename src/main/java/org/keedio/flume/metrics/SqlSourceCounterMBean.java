@@ -18,7 +18,7 @@
  *******************************************************************************/
 
 
-package com.keedio.flume.metrics;
+package org.keedio.flume.metrics;
 
 /**
  * 
