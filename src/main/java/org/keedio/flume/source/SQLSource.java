@@ -167,8 +167,8 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     			r.close();
     		}
     		
-    		// if queryResult size is equals to maxRows
-    		if (queryResult.getRow() < 1000){
+    		// if queryResult size is equals to maxRows, the system doesn't wait to execute the next query
+    		if (queryResult.getRow() < sqlSourceUtils.getMaxRows()){
     			Thread.sleep(sqlSourceUtils.getRunQueryDelay());
     		}
     		
