@@ -119,9 +119,9 @@ agent.sources.sql-source.status.file.path = /var/lib/flume
 agent.sources.sql-source.status.file.name = sql-source.status
 
 # Custom query
-agent.sources.sql-source.status.custom.query = SELECT * FROM table WHERE something AND @;
-agent.sources.sql-source.status.batch.size = 1000;
-agent.sources.sql-source.status.max.rows = 10000;
+agent.sources.sql-source.custom.query = SELECT * FROM table WHERE something AND @;
+agent.sources.sql-source.batch.size = 1000;
+agent.sources.sql-source.max.rows = 10000;
 
 
 # 
