@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.keedio.flume.flume-ng-sources</groupId>
   <artifactId>flume-ng-sql-source</artifactId>
-  <version>1.1.1</version>
+  <version>1.2-SNAPSHOT</version>
   <dependencies>
     <dependency>
     	<groupId>org.apache.flume</groupId>
