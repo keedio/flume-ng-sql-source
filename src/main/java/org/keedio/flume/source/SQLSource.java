@@ -18,9 +18,9 @@
  *******************************************************************************/
 package org.keedio.flume.source;
 
-
+import java.io.IOException;
+import java.io.Writer;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -40,6 +40,7 @@ import org.keedio.flume.metrics.SqlSourceCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import au.com.bytecode.opencsv.CSVWriter;
 
 
 /**
@@ -62,19 +63,23 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     
     private static final Logger log = LoggerFactory.getLogger(SQLSource.class);
     private SqlDBEngine mDBEngine;
-    private SQLSourceUtils sqlSourceUtils;
+    protected SQLSourceUtils sqlSourceUtils;
     private boolean isConnected;
     private JdbcDriver driver;
     private Statement statement;
     private SqlSourceCounter sqlSourceCounter;
+    private CSVWriter csvWriter;
        
     @Override
     public void configure(Context context) throws ConfigurationException{
         	
     	log.info("Reading and processing configuration values for source " + getName());
-		sqlSourceUtils = new SQLSourceUtils(context);
-        sqlSourceCounter = new SqlSourceCounter("SOURCESQL." + this.getName());
+		
+    	sqlSourceUtils = new SQLSourceUtils(context);
+        
+		sqlSourceCounter = new SqlSourceCounter("SOURCESQL." + this.getName());
         sqlSourceCounter.start();
+        
         mDBEngine = new SqlDBEngine(sqlSourceUtils.getConnectionURL(),
                                     sqlSourceUtils.getUserDataBase(),
                                     sqlSourceUtils.getPasswordDatabase());
@@ -82,138 +87,114 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         log.info("Establishing connection to " + sqlSourceUtils.getConnectionURL() 
         		+ " for source  " + getName());
        
+        csvWriter = new CSVWriter(new ChannelWriter());
+        
         if (loadDriver(sqlSourceUtils.getDriverName())) {
             log.info("Source " + getName() + " CONNECTED to database");
         } else {
         	throw new ConfigurationException("Error loading driver " + sqlSourceUtils.getDriverName());
         }
         
-    } //end configure
-    
+    }  
     
     public Status process() throws EventDeliveryException {
-    	byte[] message;
-    	Event event;
-    	Map<String, String> headers;
-    	String query;
-    	int batchSize = sqlSourceUtils.getBatchSize();
-		List<Event> events = new ArrayList<Event>();
-		
+
+    	String query = SQLQueryBuilder.buildQuery(sqlSourceUtils);
+    	log.debug("Running query: " + query);
+    	
     	try
     	{
-    		query = SQLQueryBuilder.buildQuery(sqlSourceUtils);
-
-    		log.info("Query: " + query);
     		ResultSet queryResult = mDBEngine.runQuery(query,this.statement);
-    		String queryResultRow;
-    		ResultSetMetaData mMetaData = queryResult.getMetaData();
-    		int mNumColumns = mMetaData.getColumnCount();
-                    
-    		//retrieve each row from resultSet
-    		while(queryResult.next()){
-    			sqlSourceCounter.incrementRowsCount();
-    			queryResultRow ="";
-
-    			for(int j = 1; j <= mNumColumns-1; j++){
-    				queryResultRow = queryResultRow + queryResult.getString(j) +",";
-    			}
-
-    			queryResultRow = queryResultRow + queryResult.getString(mNumColumns);
-    			message = queryResultRow.getBytes();
-    			event = new SimpleEvent();
-    			headers = new HashMap<String, String>();
-    			headers.put("timestamp", String.valueOf(System.currentTimeMillis()));
-    			event.setBody(message);
-    			event.setHeaders(headers);
-    			sqlSourceCounter.incrementEventCount();
-    			sqlSourceCounter.incrementRowsProc();
     		
-    			if (events.size()<batchSize){
-    				events.add(event);
-    			}else{	
-    				getChannelProcessor().processEventBatch(events);
-    				events.clear();
-    			}
-    		}
-    		if (!events.isEmpty()){
-    			getChannelProcessor().processEventBatch(events);
-				events.clear();
-    		}
-		
-    		//A TYPE_FORWARD_ONLY ResultSet doesn't support method last() , among others.
-    		//TODO: Check this how it's working with sqlite
-    		if (!(sqlSourceUtils.getDriverName().equals("sqlite"))){
-    			if ( queryResult.last())
-    			{
-    				sqlSourceUtils.setCurrentIncrementalValue(Long.parseLong(
-    						queryResult.getString(sqlSourceUtils.getIncrementalColumnName()),10));
-    				
-    				log.info("Last row increment value readed: " + sqlSourceUtils.getIncrementalValue() 
-    						+ ", updating status file...");
-    				sqlSourceUtils.updateStatusFile(sqlSourceUtils.getIncrementalValue());
-    			} 
-    		} else {
-    			ResultSet r = statement.executeQuery("SELECT COUNT(*) AS rowcount FROM " 
-    					+ sqlSourceUtils.getTable() + ";");
-    			r.next();
-    			int count = r.getInt("rowcount");
-    			if (count > sqlSourceUtils.getStatusFileIncrement()){
-    				sqlSourceUtils.setCurrentIncrementalValue(Long.parseLong(queryResult.getString(1),10));
-    				
-    				log.info("Last row increment value readed: " + sqlSourceUtils.getIncrementalValue() 
-    						+ ", updating status file...");
-    				sqlSourceUtils.updateStatusFile(sqlSourceUtils.getIncrementalValue());
-    			}
-    			r.close();
+    		/* Checking if queryResult is not empty */
+    		if (queryResult.isBeforeFirst())
+    		{
+	    		try{	
+	    			csvWriter.writeAll(queryResult, false);
+	    		}
+	    		
+	    		/* If csvWriter throws an SQL exception a row is corrupted 
+	    		 * - Reports the error
+	    		 * - Flush previously processed rows
+	    		 * - Update status file to avoid row repetitions */
+	    		
+	    		catch (SQLException e) {
+	                log.error(e.getMessage(),e);
+	                csvWriter.flush();
+	                sqlSourceUtils.updateStatusFile(queryResult);
+	        		return Status.BACKOFF;
+	    		}
+	    		
+	    		csvWriter.flush();	
+	    		sqlSourceUtils.updateStatusFile(queryResult);
     		}
     		
-    		// if queryResult size is equals to maxRows, the system doesn't wait to execute the next query
+    		/* If queryResult size is equals to maxRows, there are pending rows to be processed
+    		 * So the system doesn't wait to execute the next query */
+    		
     		if (queryResult.getRow() < sqlSourceUtils.getMaxRows()){
     			Thread.sleep(sqlSourceUtils.getRunQueryDelay());
     		}
     		
-    	
+    		queryResult.close();
+
     		return Status.READY;
     	}
     	
     	catch(SQLException e)
     	{
     		log.error("SQL exception, check if query for source " + getName() + " is correctly constructed");
-            log.error(e.getMessage(),e);        
+            log.error(e.getMessage(),e);
     		return Status.BACKOFF;
-            }
-            catch(InterruptedException e)
-            {
-                    log.error("Interruptedexception", e);
-                    return Status.BACKOFF;			
-            }
+        }
+        catch(InterruptedException e)
+        {
+            log.error("Interruptedexception", e);
+            return Status.BACKOFF;			
+        }
+    	catch(IOException e)
+        {
+            log.error("Error procesing row", e);
+            return Status.BACKOFF;			
+        }
+    	
     }
 
  
     public void start(Context context) {
-            log.info("Starting sql source {} ...", getName());
+        
+    	log.info("Starting sql source {} ...", getName());
         super.start();
     }
 
     @Override
     public void stop() {
         
-            log.info("Stopping sql source {} ...", getName());
-            try {
-                    if (isConnected) {
-                        log.info("Closing connection to database " + sqlSourceUtils.getConnectionURL());
-                        mDBEngine.CloseConnection();
-                    } else {
-                        log.info("Nothing to close for " + sqlSourceUtils.getConnectionURL());
-                    }
-                    
-            } catch (SQLException e) {
-                    log.error("Error closing database connection " + sqlSourceUtils.getConnectionURL());
-                    super.stop();
-                    
+        log.info("Stopping sql source {} ...", getName());
+        
+        try 
+        {
+            if (isConnected) {
+                log.info("Closing connection to database " + sqlSourceUtils.getConnectionURL());
+                mDBEngine.CloseConnection();
+            } else {
+                log.info("Nothing to close for " + sqlSourceUtils.getConnectionURL());
             }
-            this.sqlSourceCounter.stop();
-            super.stop();
+            csvWriter.close();
+                
+        } catch (SQLException e) {
+            log.warn("Error closing database connection " + sqlSourceUtils.getConnectionURL());
+            try {
+				csvWriter.close();
+			} catch (IOException e1) {
+				log.warn("Error CSVWriter object ", e);
+			}
+        } catch (IOException e) {
+        	log.warn("Error CSVWriter object ", e);
+        } finally {
+        	this.sqlSourceCounter.stop();
+        	super.stop();
+        }
     }
     
     /*
@@ -273,7 +254,6 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                     break;
                     
                 default:
-                	log.info("Mierda de codigo coño");
                     mDBEngine.EstablishConnection();  
                     statement = mDBEngine.getConnection().createStatement();
                     isConnected = true;
@@ -292,5 +272,38 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                 
         }
         return isConnected;
+    }
+    
+    private class ChannelWriter extends Writer{
+        private List<Event> events = new ArrayList<>();
+
+        @Override
+        public void write(char[] cbuf, int off, int len) throws IOException {
+            Event event = new SimpleEvent();
+            
+            String s = new String(cbuf);
+            event.setBody(s.substring(off, len-1).getBytes());
+            
+            Map<String, String> headers;
+            headers = new HashMap<String, String>();
+			headers.put("timestamp", String.valueOf(System.currentTimeMillis()));
+			event.setHeaders(headers);
+			
+            events.add(event);
+            
+            if (events.size() >= sqlSourceUtils.getBatchSize())
+            	flush();
+        }
+
+        @Override
+        public void flush() throws IOException {
+            getChannelProcessor().processEventBatch(events);
+            events.clear();
+        }
+
+        @Override
+        public void close() throws IOException {
+            flush();
+        }
     }
 }
