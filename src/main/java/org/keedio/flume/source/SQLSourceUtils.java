@@ -5,9 +5,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import org.apache.flume.conf.ConfigurationException;
-
 import org.apache.flume.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +30,6 @@ public class SQLSourceUtils {
 	private int runQueryDelay,batchSize,maxRows;
 	private long incrementalValue;
 	private File file,directory;
-	private FileWriter writer;
 	private static final String DEFAULT_STATUS_DIRECTORY = "/var/lib/flume";
 	
 	public SQLSourceUtils(Context context) throws ConfigurationException {
@@ -39,7 +40,6 @@ public class SQLSourceUtils {
 		incrementalColumnName = context.getString("incremental.column.name");
 		columnsToSelect = context.getString("columns.to.select","*");
 		runQueryDelay = context.getInteger("run.query.delay",10000);
-		incrementalValue = context.getLong("incremental.value",0L);
 		user = context.getString("user");
 		password = context.getString("password");
 		directory = new File(getStatusFilePath());
@@ -48,46 +48,32 @@ public class SQLSourceUtils {
 		maxRows = context.getInteger("max.rows",10000);
 		
 		setDriverNameFromURL();
-		
 		checkMandatoryProperties();
                 
 		if (!(isStatusDirectoryCreated())) {
 			createDirectory();
 		}
 		file = new File(getStatusFilePath()+"/"+getStatusFileName());
-	}
-
-	public long getCurrentIncrementalValue(){
-
-		if (!isStatusFileCreated()){
-			log.info(statusFilePath + "/" + statusFileName + " not exists, creating it "
-					+ "and using configured incremental value: {}",incrementalValue);
-			writeStatusFile(incrementalValue);
-			return incrementalValue;
-		}
-		else{
-			log.info(statusFilePath + "/" + statusFileName + " currently exists, checking it");
-			long incValueInFile = getStatusFileIncrement(); 
-			if (incValueInFile < 0){
-				log.error("There was an error getting value from file. Creating "
-						+ "new status file and using configured incremental value: {}",incrementalValue);
-				writeStatusFile(incrementalValue);
-				return incrementalValue;
-			}
-			else{
-				log.info("Incremental value readed from file: {}",incValueInFile);
-				return incValueInFile;
-			}
-		}
+		
+		incrementalValue = getStatusFileIncrement(context.getLong("incremental.value",0L));
 	}
 	
-	public void updateStatusFile(long lastIncrementalvalue){
+	public void updateStatusFile(ResultSet queryResult) throws NumberFormatException, SQLException{
 		
 		log.info("Updating status file");
-		writeStatusFile(lastIncrementalvalue);		
+		
+		if (queryResult.isAfterLast())
+			queryResult.last();
+		
+		setCurrentIncrementalValue(Long.parseLong(queryResult.getString(getIncrementalColumnName()),10));
+		
+		log.info("Last row increment value readed: " + getIncrementalValue() 
+				+ ", updating status file...");
+		
+		writeStatusFile(getIncrementalValue());		
 	}
 	
-	public boolean isStatusFileCreated(){
+	private boolean isStatusFileCreated(){
 		
 		return file.exists() && !file.isDirectory() ? true: false;
 	}
@@ -100,38 +86,52 @@ public class SQLSourceUtils {
 	}
         
 	
-	public long getStatusFileIncrement(){
-		try {
-			FileReader reader = new FileReader(file);
-			char[] chars = new char[(int) file.length()];
-			reader.read(chars);
-			String[] statusInfo = new String(chars).split(" ");
-			if (statusInfo[0].equals(connectionURL) && statusInfo[1].equals(table) &&
-					statusInfo[2].equals(incrementalColumnName)){
-				reader.close();
-				log.info(statusFilePath + "/" + statusFileName + " correctly formed");				
-				return Long.parseLong(statusInfo[3],10);
+	private long getStatusFileIncrement(long configuredStartValue){
+		
+		if (!isStatusFileCreated()){
+			log.info("Status file not created, using start value from config file");
+			return configuredStartValue;
+		}
+		else{
+			try {
+				FileReader reader = new FileReader(file);
+				char[] chars = new char[(int) file.length()];
+				reader.read(chars);
+				String[] statusInfo = new String(chars).split(" ");
+				if (statusInfo[0].equals(connectionURL) && statusInfo[1].equals(table) &&
+						statusInfo[2].equals(incrementalColumnName)){
+					reader.close();
+					log.info(statusFilePath + "/" + statusFileName + " correctly formed");				
+					return Long.parseLong(statusInfo[3],10);
+				}
+				else{
+					log.warn(statusFilePath + "/" + statusFileName + " corrupt!!! Deleting it.");
+					reader.close();
+					deleteStatusFile();
+					return configuredStartValue;
+				}
+			}catch (NumberFormatException | IOException e){
+				log.error("Corrupt increment value in file!!! Deleting it.");
+				deleteStatusFile();
+				return configuredStartValue;
 			}
-			else{
-				log.warn(statusFilePath + "/" + statusFileName + " corrupt!!!");
-				reader.close();
-				return -1;
-			}
-		}catch (NumberFormatException e){
-			log.error("Corrupt increment value in file!!!");
-			return -1;
-		}catch (IOException e){
-			log.error("Error reading incremental value from status file!!!");
-			
-			return -1;
 		}
 	}
 	
-	public void writeStatusFile(long incrementalValue){
+	private void deleteStatusFile(){
+		if (file.delete()){
+			log.info("Deleted status file: {}",file.getAbsolutePath());
+		}else{
+			log.warn("Error deleting file: {}",file.getAbsolutePath());
+		}
+			
+	}
+	
+	private void writeStatusFile(long incrementalValue){
 		
 		/* Status file creation or update */
 		try{
-			writer = new FileWriter(file,false);
+			Writer writer = new FileWriter(file,false);
 			writer.write(connectionURL+" ");
 			writer.write(table+" ");
 			writer.write(incrementalColumnName+" ");
@@ -232,20 +232,6 @@ public class SQLSourceUtils {
 	 */
 	private void setIncrementalColumnName(String newIncrementalColumnName) {
 		incrementalColumnName = newIncrementalColumnName;
-	}
-
-	/*
-	 * @return File file
-	 */
-	public File getFile() {
-		return file;
-	}
-
-	/*
-	 * @void set file
-	 */
-	private void setFile(File newFile) {
-		file = newFile;
 	}
 
 	/*
