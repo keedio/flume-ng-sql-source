@@ -128,6 +128,9 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 	    		csvWriter.flush();	
 	    		sqlSourceUtils.updateStatusFile(queryResult);
     		}
+    		else{
+    			log.debug("Empty ResultSet after running query");
+    		}
     		
     		/* If queryResult size is equals to maxRows, there are pending rows to be processed
     		 * So the system doesn't wait to execute the next query */

@@ -15,13 +15,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-
-
-
 /**
  *  * @author Marcelo Valle https://github.com/mvalleavila
  *  * @modified Luis Lazaro
  */
+
 public class SQLSourceUtils {
 	private static final Logger log = LoggerFactory.getLogger(SQLSourceUtils.class);
 	private String statusFilePath, statusFileName, connectionURL, table,
@@ -57,7 +55,7 @@ public class SQLSourceUtils {
 		if (!(isStatusDirectoryCreated())) {
 			createDirectory();
 		}
-		file = new File(getStatusFilePath()+"/"+getStatusFileName());
+		file = new File(getStatusFilePath() + "/" + getStatusFileName());
 		
 		incrementalValue = getStatusFileIncrement(context.getLong("incremental.value",DEFAULT_INCREMENTAL_VALUE));
 	}
@@ -66,14 +64,7 @@ public class SQLSourceUtils {
 		
 		log.info("Updating status file");
 		
-		//Check empty result set
-		if (!queryResult.isBeforeFirst()){
-			log.warn("Result set is empty");
-			return;
-		}
-		
-		if (queryResult.isAfterLast())
-			queryResult.last();
+		queryResult.last();
 		
 		setIncrementalValue(queryResult.getLong(getIncrementalColumnName()));
 		

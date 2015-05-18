@@ -16,6 +16,10 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+/**
+* @author Marcelo Valle https://github.com/mvalleavila
+*/
+
 @RunWith(PowerMockRunner.class)
 public class SQLSourceUtilsTest {
 
