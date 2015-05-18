@@ -64,7 +64,8 @@ public class SQLSourceUtils {
 		
 		log.info("Updating status file");
 		
-		queryResult.last();
+		if (queryResult.isAfterLast())
+			queryResult.last();
 		
 		setIncrementalValue(queryResult.getLong(getIncrementalColumnName()));
 		
