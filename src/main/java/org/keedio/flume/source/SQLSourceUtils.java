@@ -5,21 +5,21 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import org.apache.flume.conf.ConfigurationException;
-
 import org.apache.flume.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-
-
 
 
 /**
  *  * @author Marcelo Valle https://github.com/mvalleavila
  *  * @modified Luis Lazaro
  */
+
 public class SQLSourceUtils {
 	private static final Logger log = LoggerFactory.getLogger(SQLSourceUtils.class);
 	private String statusFilePath, statusFileName, connectionURL, table,
@@ -28,8 +28,11 @@ public class SQLSourceUtils {
 	private int runQueryDelay,batchSize,maxRows;
 	private long incrementalValue;
 	private File file,directory;
-	private FileWriter writer;
 	private static final String DEFAULT_STATUS_DIRECTORY = "/var/lib/flume";
+	private static final int DEFAULT_QUERY_DELAY = 10000;
+	private static final int DEFAULT_BATCH_SIZE = 100;
+	private static final int DEFAULT_MAX_ROWS = 10000;
+	private static final long DEFAULT_INCREMENTAL_VALUE = 0L;
 	
 	public SQLSourceUtils(Context context) throws ConfigurationException {
 		statusFilePath = context.getString("status.file.path", DEFAULT_STATUS_DIRECTORY);
@@ -38,56 +41,40 @@ public class SQLSourceUtils {
 		table = context.getString("table");
 		incrementalColumnName = context.getString("incremental.column.name");
 		columnsToSelect = context.getString("columns.to.select","*");
-		runQueryDelay = context.getInteger("run.query.delay",10000);
-		incrementalValue = context.getLong("incremental.value",0L);
+		runQueryDelay = context.getInteger("run.query.delay",DEFAULT_QUERY_DELAY);
 		user = context.getString("user");
 		password = context.getString("password");
 		directory = new File(getStatusFilePath());
 		customQuery = context.getString("custom.query");
-		batchSize = context.getInteger("batch.size",100);
-		maxRows = context.getInteger("max.rows",10000);
-		
-		setDriverNameFromURL();
+		batchSize = context.getInteger("batch.size",DEFAULT_BATCH_SIZE);
+		maxRows = context.getInteger("max.rows",DEFAULT_MAX_ROWS);
 		
 		checkMandatoryProperties();
+		setDriverNameFromURL();
                 
 		if (!(isStatusDirectoryCreated())) {
 			createDirectory();
 		}
-		file = new File(getStatusFilePath()+"/"+getStatusFileName());
-	}
-
-	public long getCurrentIncrementalValue(){
-
-		if (!isStatusFileCreated()){
-			log.info(statusFilePath + "/" + statusFileName + " not exists, creating it "
-					+ "and using configured incremental value: {}",incrementalValue);
-			writeStatusFile(incrementalValue);
-			return incrementalValue;
-		}
-		else{
-			log.info(statusFilePath + "/" + statusFileName + " currently exists, checking it");
-			long incValueInFile = getStatusFileIncrement(); 
-			if (incValueInFile < 0){
-				log.error("There was an error getting value from file. Creating "
-						+ "new status file and using configured incremental value: {}",incrementalValue);
-				writeStatusFile(incrementalValue);
-				return incrementalValue;
-			}
-			else{
-				log.info("Incremental value readed from file: {}",incValueInFile);
-				return incValueInFile;
-			}
-		}
+		file = new File(getStatusFilePath() + "/" + getStatusFileName());
+		
+		incrementalValue = getStatusFileIncrement(context.getLong("incremental.value",DEFAULT_INCREMENTAL_VALUE));
 	}
 	
-	public void updateStatusFile(long lastIncrementalvalue){
+	public void updateStatusFile(ResultSet queryResult) throws NumberFormatException, SQLException{
 		
 		log.info("Updating status file");
-		writeStatusFile(lastIncrementalvalue);		
+		
+		queryResult.last();
+		
+		setIncrementalValue(queryResult.getLong(getIncrementalColumnName()));
+		
+		log.info("Last row increment value readed: " + getIncrementalValue() 
+				+ ", updating status file...");
+		
+		writeStatusFile();		
 	}
 	
-	public boolean isStatusFileCreated(){
+	private boolean isStatusFileCreated(){
 		
 		return file.exists() && !file.isDirectory() ? true: false;
 	}
@@ -100,42 +87,56 @@ public class SQLSourceUtils {
 	}
         
 	
-	public long getStatusFileIncrement(){
-		try {
-			FileReader reader = new FileReader(file);
-			char[] chars = new char[(int) file.length()];
-			reader.read(chars);
-			String[] statusInfo = new String(chars).split(" ");
-			if (statusInfo[0].equals(connectionURL) && statusInfo[1].equals(table) &&
-					statusInfo[2].equals(incrementalColumnName)){
-				reader.close();
-				log.info(statusFilePath + "/" + statusFileName + " correctly formed");				
-				return Long.parseLong(statusInfo[3],10);
+	private long getStatusFileIncrement(long configuredStartValue){
+		
+		if (!isStatusFileCreated()){
+			log.info("Status file not created, using start value from config file");
+			return configuredStartValue;
+		}
+		else{
+			try {
+				FileReader reader = new FileReader(file);
+				char[] chars = new char[(int) file.length()];
+				reader.read(chars);
+				String[] statusInfo = new String(chars).split(" ");
+				if (statusInfo[0].equals(connectionURL) && statusInfo[1].equals(table) &&
+						statusInfo[2].equals(incrementalColumnName)){
+					reader.close();
+					log.info(statusFilePath + "/" + statusFileName + " correctly formed");				
+					return Long.parseLong(statusInfo[3],10);
+				}
+				else{
+					log.warn(statusFilePath + "/" + statusFileName + " corrupt!!! Deleting it.");
+					reader.close();
+					deleteStatusFile();
+					return configuredStartValue;
+				}
+			}catch (NumberFormatException | IOException e){
+				log.error("Corrupt increment value in file!!! Deleting it.");
+				deleteStatusFile();
+				return configuredStartValue;
 			}
-			else{
-				log.warn(statusFilePath + "/" + statusFileName + " corrupt!!!");
-				reader.close();
-				return -1;
-			}
-		}catch (NumberFormatException e){
-			log.error("Corrupt increment value in file!!!");
-			return -1;
-		}catch (IOException e){
-			log.error("Error reading incremental value from status file!!!");
-			
-			return -1;
 		}
 	}
 	
-	public void writeStatusFile(long incrementalValue){
+	private void deleteStatusFile(){
+		if (file.delete()){
+			log.info("Deleted status file: {}",file.getAbsolutePath());
+		}else{
+			log.warn("Error deleting file: {}",file.getAbsolutePath());
+		}
+			
+	}
+	
+	private void writeStatusFile(){
 		
 		/* Status file creation or update */
 		try{
-			writer = new FileWriter(file,false);
+			Writer writer = new FileWriter(file,false);
 			writer.write(connectionURL+" ");
 			writer.write(table+" ");
 			writer.write(incrementalColumnName+" ");
-			writer.write(Long.toString(incrementalValue)+" \n");
+			writer.write(Long.toString(getIncrementalValue())+" \n");
 			writer.close();
 		}catch (IOException e) {
 			log.error("Error writing incremental value to status file!!!");
@@ -144,6 +145,7 @@ public class SQLSourceUtils {
 	}
 	
 	private void checkMandatoryProperties() throws ConfigurationException {
+		
 		if (getStatusFileName() == null){
 			throw new ConfigurationException("status.file.name property not set");
 		}
@@ -172,94 +174,38 @@ public class SQLSourceUtils {
 	}
         
 	/*
-	@void set statusFilePath
-	 */
-	private void setStatusFilePath(String newStatusFilePath){
-		statusFilePath  = newStatusFilePath;
-	}
-        
-	/*
 	@return String statusFileName
 	 */
 	private String getStatusFileName(){
 		return statusFileName;
 	}
-        
-	/*
-	@void set statusFileName
-	 */
-	private void setStatusFileName(String newStatusFileName){
-		statusFileName = newStatusFileName;
-	}
        
 	/*
 	@return String connectionURL
 	 */
-	public String getConnectionURL(){            
+	String getConnectionURL(){            
 		return connectionURL;
-	}
-        
-	/*
-	 * @void set connectionURL
-	 */
-	private void setConnectionURL(String newConnectionURL) {
-		connectionURL = newConnectionURL;
 	}
 
 	/*
 	 * @return String table
 	 */
-	public String getTable() {
+	String getTable() {
 		return table;
-	}
-
-	/*
-	 * @void set table
-	 */
-	private void setTable(String newTable) {
-		table = newTable;
 	}
 
 	/*
 	 * @return String incrementalColumnName
 	 */
-	public String getIncrementalColumnName() {
+	String getIncrementalColumnName() {
 		return incrementalColumnName;
-	}
-
-	/*
-	 * @void set incrementalColumnName
-	 */
-	private void setIncrementalColumnName(String newIncrementalColumnName) {
-		incrementalColumnName = newIncrementalColumnName;
-	}
-
-	/*
-	 * @return File file
-	 */
-	public File getFile() {
-		return file;
-	}
-
-	/*
-	 * @void set file
-	 */
-	private void setFile(File newFile) {
-		file = newFile;
 	}
 
 	/*
 	 * @return File directory
 	 */
-	public File getDirectory() {
+	private File getDirectory() {
 		return directory;
-	}
-
-	/*
-	 * @void set directory
-	 */
-	private void setDirectory(File newDirectory) {
-		directory = newDirectory;
 	}
 
 	/*
@@ -272,80 +218,65 @@ public class SQLSourceUtils {
 	/*
 	 * @return String columns to select from table data base
 	 */
-	public String getColumnsToSelect() {
+	String getColumnsToSelect() {
 		return columnsToSelect;
 	}
 
 	/*
 	 * @return the custom query defined in properties file
 	 */
-	public String getCustomQuery() {
+	String getCustomQuery() {
 		return customQuery;
-	}
-
-	/*
-	 * @void set columns to select from data base
-	 */
-	public void setColumnsToSelect(String newColumns) {
-		columnsToSelect = newColumns;
 	}
 
 	/*
 	 * @return long incremental value as parameter from this
 	 */
-	public long getIncrementalValue() {
+	long getIncrementalValue() {
 		return incrementalValue;
 	}
 
 	/*
 	 * @void set incrementValue
 	 */
-	public void setCurrentIncrementalValue(long newValue) {
+	private void setIncrementalValue(long newValue) {
 		incrementalValue = newValue;
 	}
 
 	/*
 	 * @return String user for database
 	 */
-	public String getUserDataBase() {
+	String getUserDataBase() {
 		return user;
 	}
 
 	/*
-	 * @return String passwor for user
+	 * @return String password for user
 	 */
-	public String getPasswordDatabase() {
+	String getPasswordDatabase() {
 		return password;
 	}
 
 	/*
 	 * @return int delay in ms
 	 */
-	public int getRunQueryDelay() {
+	int getRunQueryDelay() {
 		return runQueryDelay;
 	}
 
 	/*
 	 * return String driver name jdbc
 	 */
-	public String getDriverName() {
+	String getDriverName() {
 		return driverName;
 	}
 	
-	public int getBatchSize() {
+	int getBatchSize() {
 		return batchSize;
 	}
 
-	public void setBatchSize(int batchSize) {
-		this.batchSize = batchSize;
-	}
-
-	public int getMaxRows() {
+	int getMaxRows() {
 		return maxRows;
-	}
-
-	public void setMaxRows(int maxRows) {
-		this.maxRows = maxRows;
 	}
 	
 	private void setDriverNameFromURL() {

@@ -29,9 +29,9 @@ public class SqlDBEngine  {
 		this.mPassword = Password;
 	}
         
-        public SqlDBEngine(String URL){
-                this.mURL= URL;
-        }
+    public SqlDBEngine(String URL){
+            this.mURL= URL;
+    }
 	
 	/**
 	 * Establishes the database connection.
@@ -56,7 +56,8 @@ public class SqlDBEngine  {
 	public Connection getConnection(){
 		return this.mConnection;
 	}
-        
+       
+	
 	/*
 	@return Resultset
 	*/
