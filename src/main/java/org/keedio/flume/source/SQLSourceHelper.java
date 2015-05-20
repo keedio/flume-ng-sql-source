@@ -6,11 +6,10 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 
 import org.apache.flume.conf.ConfigurationException;
 import org.apache.flume.Context;
+import org.hibernate.cfg.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,26 +19,33 @@ import org.slf4j.LoggerFactory;
  *  * @modified Luis Lazaro
  */
 
-public class SQLSourceUtils {
-	private static final Logger log = LoggerFactory.getLogger(SQLSourceUtils.class);
+public class SQLSourceHelper {
+	private static final Logger log = LoggerFactory.getLogger(SQLSourceHelper.class);
 	private String statusFilePath, statusFileName, connectionURL, table,
-                       incrementalColumnName,columnsToSelect,user,password,driverName,
+                       indexColumnName,columnsToSelect,user,password,driverName,
                        customQuery;
 	private int runQueryDelay,batchSize,maxRows;
-	private long incrementalValue;
+	private int currentIndex;
 	private File file,directory;
+	private Configuration config;
+	private String query;
+	
 	private static final String DEFAULT_STATUS_DIRECTORY = "/var/lib/flume";
 	private static final int DEFAULT_QUERY_DELAY = 10000;
 	private static final int DEFAULT_BATCH_SIZE = 100;
 	private static final int DEFAULT_MAX_ROWS = 10000;
-	private static final long DEFAULT_INCREMENTAL_VALUE = 0L;
+	private static final int DEFAULT_INCREMENTAL_VALUE = 0;
 	
-	public SQLSourceUtils(Context context) throws ConfigurationException {
+	
+
+	
+	public SQLSourceHelper(Context context) throws ConfigurationException {
+		
 		statusFilePath = context.getString("status.file.path", DEFAULT_STATUS_DIRECTORY);
 		statusFileName = context.getString("status.file.name");
 		connectionURL = context.getString("connection.url");
 		table = context.getString("table");
-		incrementalColumnName = context.getString("incremental.column.name");
+		indexColumnName = context.getString("incremental.column.name");
 		columnsToSelect = context.getString("columns.to.select","*");
 		runQueryDelay = context.getInteger("run.query.delay",DEFAULT_QUERY_DELAY);
 		user = context.getString("user");
@@ -57,20 +63,13 @@ public class SQLSourceUtils {
 		}
 		file = new File(getStatusFilePath() + "/" + getStatusFileName());
 		
-		incrementalValue = getStatusFileIncrement(context.getLong("incremental.value",DEFAULT_INCREMENTAL_VALUE));
+		currentIndex = getStatusFileIndex(context.getInteger("incremental.value",DEFAULT_INCREMENTAL_VALUE));
+		
+		query = SQLQueryBuilder.buildQuery(this);
 	}
+
 	
-	public void updateStatusFile(ResultSet queryResult) throws NumberFormatException, SQLException{
-		
-		log.info("Updating status file");
-		
-		queryResult.last();
-		
-		setIncrementalValue(queryResult.getLong(getIncrementalColumnName()));
-		
-		log.info("Last row increment value readed: " + getIncrementalValue() 
-				+ ", updating status file...");
-		
+	public void updateStatusFile(){
 		writeStatusFile();		
 	}
 	
@@ -87,7 +86,7 @@ public class SQLSourceUtils {
 	}
         
 	
-	private long getStatusFileIncrement(long configuredStartValue){
+	private int getStatusFileIndex(int configuredStartValue){
 		
 		if (!isStatusFileCreated()){
 			log.info("Status file not created, using start value from config file");
@@ -100,10 +99,10 @@ public class SQLSourceUtils {
 				reader.read(chars);
 				String[] statusInfo = new String(chars).split(" ");
 				if (statusInfo[0].equals(connectionURL) && statusInfo[1].equals(table) &&
-						statusInfo[2].equals(incrementalColumnName)){
+						statusInfo[2].equals(indexColumnName)){
 					reader.close();
 					log.info(statusFilePath + "/" + statusFileName + " correctly formed");				
-					return Long.parseLong(statusInfo[3],10);
+					return Integer.parseInt(statusInfo[3]);
 				}
 				else{
 					log.warn(statusFilePath + "/" + statusFileName + " corrupt!!! Deleting it.");
@@ -112,7 +111,7 @@ public class SQLSourceUtils {
 					return configuredStartValue;
 				}
 			}catch (NumberFormatException | IOException e){
-				log.error("Corrupt increment value in file!!! Deleting it.");
+				log.error("Corrupt index value in file!!! Deleting it.");
 				deleteStatusFile();
 				return configuredStartValue;
 			}
@@ -135,8 +134,8 @@ public class SQLSourceUtils {
 			Writer writer = new FileWriter(file,false);
 			writer.write(connectionURL+" ");
 			writer.write(table+" ");
-			writer.write(incrementalColumnName+" ");
-			writer.write(Long.toString(getIncrementalValue())+" \n");
+			writer.write(indexColumnName+" ");
+			writer.write(Integer.toString(getCurrentIndex())+" \n");
 			writer.close();
 		}catch (IOException e) {
 			log.error("Error writing incremental value to status file!!!");
@@ -155,7 +154,7 @@ public class SQLSourceUtils {
 		if (getTable() == null && getCustomQuery() == null){
 			throw new ConfigurationException("property table not set");
 		}
-		if (getIncrementalColumnName() == null){
+		if (getIndexColumnName() == null){
 			throw new ConfigurationException("incremental.column.name  property not set");
 		}
 		if (getPasswordDatabase() == null){
@@ -197,8 +196,8 @@ public class SQLSourceUtils {
 	/*
 	 * @return String incrementalColumnName
 	 */
-	String getIncrementalColumnName() {
-		return incrementalColumnName;
+	String getIndexColumnName() {
+		return indexColumnName;
 	}
 
 	/*
@@ -232,15 +231,15 @@ public class SQLSourceUtils {
 	/*
 	 * @return long incremental value as parameter from this
 	 */
-	long getIncrementalValue() {
-		return incrementalValue;
+	int getCurrentIndex() {
+		return currentIndex;
 	}
 
 	/*
 	 * @void set incrementValue
 	 */
-	private void setIncrementalValue(long newValue) {
-		incrementalValue = newValue;
+	void setCurrentIndex(int newValue) {
+		currentIndex = newValue;
 	}
 
 	/*
@@ -289,6 +288,14 @@ public class SQLSourceUtils {
 					+ getConnectionURL());
 			driverName = "unknown";
 		}
+	}
+	
+	Configuration getHibernateConfig(){
+		return config;
+	}
+	
+	String getQuery(){
+		return query;
 	}
 	
 }

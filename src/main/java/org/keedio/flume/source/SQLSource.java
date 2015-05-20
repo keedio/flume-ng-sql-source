@@ -20,8 +20,6 @@ package org.keedio.flume.source;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -63,106 +61,67 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     
     private static final Logger log = LoggerFactory.getLogger(SQLSource.class);
     private SqlDBEngine mDBEngine;
-    protected SQLSourceUtils sqlSourceUtils;
+    protected SQLSourceHelper sqlSourceHelper;
     private boolean isConnected;
-    private JdbcDriver driver;
-    private Statement statement;
     private SqlSourceCounter sqlSourceCounter;
     private CSVWriter csvWriter;
+    private HibernateHelper hibernateHelper;
        
     @Override
     public void configure(Context context) throws ConfigurationException{
         	
     	log.info("Reading and processing configuration values for source " + getName());
 		
-    	sqlSourceUtils = new SQLSourceUtils(context);
+    	/* Initialize configuration parameters */
+    	sqlSourceHelper = new SQLSourceHelper(context);
         
+    	/* Initialize metric counters */
 		sqlSourceCounter = new SqlSourceCounter("SOURCESQL." + this.getName());
         sqlSourceCounter.start();
         
-        mDBEngine = new SqlDBEngine(sqlSourceUtils.getConnectionURL(),
-                                    sqlSourceUtils.getUserDataBase(),
-                                    sqlSourceUtils.getPasswordDatabase());
-        
-        log.info("Establishing connection to " + sqlSourceUtils.getConnectionURL() 
-        		+ " for source  " + getName());
+        /* Establish connection with database */
+        hibernateHelper = new HibernateHelper(context);
+        hibernateHelper.establishSession();
        
+        /* Instantiate the CSV Writer */
         csvWriter = new CSVWriter(new ChannelWriter());
-        
-        if (loadDriver(sqlSourceUtils.getDriverName())) {
-            log.info("Source " + getName() + " CONNECTED to database");
-        } else {
-        	throw new ConfigurationException("Error loading driver " + sqlSourceUtils.getDriverName());
-        }
         
     }  
     
-    public Status process() throws EventDeliveryException {
-
-    	String query = SQLQueryBuilder.buildQuery(sqlSourceUtils);
-    	log.debug("Running query: " + query);
-    	
-    	try
-    	{
-    		ResultSet queryResult = mDBEngine.runQuery(query,this.statement);
-    		
-    		/* Checking if queryResult is not empty */
-    		if (queryResult.isBeforeFirst())
-    		{
-	    		try{	
-	    			csvWriter.writeAll(queryResult, false);
-	    		}
-	    		
-	    		/* If csvWriter throws an SQL exception a row is corrupted 
-	    		 * - Reports the error
-	    		 * - Flush previously processed rows
-	    		 * - Update status file to avoid row repetitions */
-	    		
-	    		catch (SQLException e) {
-	                log.error(e.getMessage(),e);
-	                csvWriter.flush();
-	                sqlSourceUtils.updateStatusFile(queryResult);
-	        		return Status.BACKOFF;
-	    		}
-	    		
-	    		csvWriter.flush();	
-	    		sqlSourceUtils.updateStatusFile(queryResult);
-    		}
-    		else{
-    			log.debug("Empty ResultSet after running query");
-    		}
-    		
-    		/* If queryResult size is equals to maxRows, there are pending rows to be processed
-    		 * So the system doesn't wait to execute the next query */
-    		
-    		if (queryResult.getRow() < sqlSourceUtils.getMaxRows()){
-    			Thread.sleep(sqlSourceUtils.getRunQueryDelay());
-    		}
-    		
-    		queryResult.close();
-
-    		return Status.READY;
-    	}
-    	
-    	catch(SQLException e)
-    	{
-    		log.error("SQL exception, check if query for source " + getName() + " is correctly constructed");
-            log.error(e.getMessage(),e);
-    		return Status.BACKOFF;
-        }
-        catch(InterruptedException e)
-        {
-            log.error("Interruptedexception", e);
-            return Status.BACKOFF;			
-        }
-    	catch(IOException e)
-        {
-            log.error("Error procesing row", e);
-            return Status.BACKOFF;			
-        }
-    	
-    }
-
+	@Override
+	public Status process() throws EventDeliveryException {
+		
+		try {
+			
+			List<List<Object>> result = hibernateHelper.executeQuery(sqlSourceHelper);
+			
+			if (!result.isEmpty())
+			{
+				String[] rowToCsv=null
+						;
+				for (int i=0; i<result.size();i++)
+				{	
+					List<Object> row = result.get(i);
+					rowToCsv = new String[row.size()];
+					for (int j=0; j< row.size(); j++){
+						rowToCsv[j] = row.get(j).toString();
+					}
+					csvWriter.writeNext(rowToCsv);
+				}
+				
+				csvWriter.flush();
+				
+			}
+			
+			sqlSourceHelper.updateStatusFile();
+			
+			return Status.READY;
+			
+		} catch (IOException e) {
+			log.error("Error procesing row", e);
+			return Status.BACKOFF;
+		}
+	}
  
     public void start(Context context) {
         
@@ -178,15 +137,15 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         try 
         {
             if (isConnected) {
-                log.info("Closing connection to database " + sqlSourceUtils.getConnectionURL());
+                log.info("Closing connection to database " + sqlSourceHelper.getConnectionURL());
                 mDBEngine.CloseConnection();
             } else {
-                log.info("Nothing to close for " + sqlSourceUtils.getConnectionURL());
+                log.info("Nothing to close for " + sqlSourceHelper.getConnectionURL());
             }
             csvWriter.close();
                 
         } catch (SQLException e) {
-            log.warn("Error closing database connection " + sqlSourceUtils.getConnectionURL());
+            log.warn("Error closing database connection " + sqlSourceHelper.getConnectionURL());
             try {
 				csvWriter.close();
 			} catch (IOException e1) {
@@ -198,83 +157,6 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         	this.sqlSourceCounter.stop();
         	super.stop();
         }
-    }
-    
-    /*
-    @return boolean driver register itself in DriverManager
-        default option will be used by jdbc drivers > 4.0
-    */
-    
-    private boolean loadDriver(String driverName)  {
-        try {
-        	driver = JdbcDriver.valueOf(driverName.toUpperCase());
-            switch(driver){
-                case POSTGRESQL:
-                    Class.forName("org.postgresql.Driver");
-                    mDBEngine.EstablishConnection();
-                    statement = mDBEngine.getConnection().createStatement(
-                    		ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);                    
-                    isConnected = true;
-                    break;
-                    
-                case MYSQL:
-                    Class.forName("com.mysql.jdbc.Driver");
-                    mDBEngine.EstablishConnection();
-                    statement = mDBEngine.getConnection().createStatement();                    
-                    isConnected = true;
-                    break;
-                
-                case SQLITE:
-                    Class.forName("org.sqlite.JDBC"); 
-                    //sqlite does not support user neither pass
-                    mDBEngine = new SqlDBEngine(sqlSourceUtils.getConnectionURL()); 
-                    mDBEngine.EstablishConnection();
-                    statement = mDBEngine.getConnection().createStatement(
-                    		ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-                    isConnected = true;
-                    break;
-                    
-                case SQLSERVER:
-                    Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");                    
-                    mDBEngine.EstablishConnection();
-                    statement = mDBEngine.getConnection().createStatement(
-                    		ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-                    isConnected = true;
-                    break;
-                
-                case ORACLE:
-                    Class.forName("oracle.jdbc.OracleDriver");
-                    mDBEngine.EstablishConnection();
-                    statement = mDBEngine.getConnection().createStatement();                    
-                    isConnected = true;
-                    break;
-                    
-                case DERBY:
-                    Class.forName("com.ibm.db2.jcc.DB2Driver");
-                    mDBEngine.EstablishConnection();
-                    statement = mDBEngine.getConnection().createStatement();                    
-                    isConnected = true;
-                    break;
-                    
-                default:
-                    mDBEngine.EstablishConnection();  
-                    statement = mDBEngine.getConnection().createStatement();
-                    isConnected = true;
-                    break;
-            }
-            
-        } catch (SQLException e) {
-                log.error("Error establishing connection to database for driver {}: {}", 
-                		sqlSourceUtils.getDriverName(), e.getMessage());
-                isConnected = false;
-                
-        } catch (ClassNotFoundException e){
-                log.error("Error resgistering dinamic load driver {}: {}",
-                		sqlSourceUtils.getDriverName(), e.getMessage());
-                isConnected = false;
-                
-        }
-        return isConnected;
     }
     
     private class ChannelWriter extends Writer{
@@ -294,7 +176,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 			
             events.add(event);
             
-            if (events.size() >= sqlSourceUtils.getBatchSize())
+            if (events.size() >= sqlSourceHelper.getBatchSize())
             	flush();
         }
 

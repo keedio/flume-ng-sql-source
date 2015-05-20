@@ -47,37 +47,37 @@ public class SQLSourceUtilsTest {
 	@Test(expected = ConfigurationException.class)
 	public void checkStatusFileNameNotSet() {
 		when(context.getString("status.file.name")).thenReturn(null);
-		new SQLSourceUtils(context);
+		new SQLSourceHelper(context);
 	}
 
 	@Test(expected = ConfigurationException.class)
 	public void connectionURLNotSet() {
 		when(context.getString("connection.url")).thenReturn(null);
-		new SQLSourceUtils(context);
+		new SQLSourceHelper(context);
 	}
 
 	@Test(expected = ConfigurationException.class)
 	public void tableNotSet() {
 		when(context.getString("table")).thenReturn(null);
-		new SQLSourceUtils(context);
+		new SQLSourceHelper(context);
 	}
 
 	@Test(expected = ConfigurationException.class)
 	public void incrementalColumnNameNotSet() {
 		when(context.getString("incremental.column.name")).thenReturn(null);
-		new SQLSourceUtils(context);
+		new SQLSourceHelper(context);
 	}
 
 	@Test(expected = ConfigurationException.class)
 	public void userNotSet() {
 		when(context.getString("user")).thenReturn(null);
-		new SQLSourceUtils(context);
+		new SQLSourceHelper(context);
 	}
 
 	@Test(expected = ConfigurationException.class)
 	public void passwordNotSet() {
 		when(context.getString("password")).thenReturn(null);
-		new SQLSourceUtils(context);
+		new SQLSourceHelper(context);
 	}
 
 	@Test
@@ -86,15 +86,15 @@ public class SQLSourceUtilsTest {
 		when(context.getString("connection.url")).thenReturn(
 				"jdbc:driverName://host:3306/database");
 
-		SQLSourceUtils sqlSourceUtils = new SQLSourceUtils(context);
+		SQLSourceHelper sqlSourceUtils = new SQLSourceHelper(context);
 		assertEquals("Sql driver name not expected", "driverName", sqlSourceUtils.getDriverName());
 	}
 
 	@Test
 	public void checkNotCreatedDirectory() throws Exception {
 
-		SQLSourceUtils sqlSourceUtils = new SQLSourceUtils(context);
-		SQLSourceUtils sqlSourceUtilsSpy = PowerMockito.spy(sqlSourceUtils);
+		SQLSourceHelper sqlSourceUtils = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceUtilsSpy = PowerMockito.spy(sqlSourceUtils);
 
 		PowerMockito.verifyPrivate(sqlSourceUtilsSpy, Mockito.times(1)).invoke("createDirectory");
 	}
@@ -103,13 +103,13 @@ public class SQLSourceUtilsTest {
 	public void updateStatusFileWithEmptyResultSet() throws Exception {
 
 		try {
-			SQLSourceUtils sqlSourceUtils = new SQLSourceUtils(context);
-			SQLSourceUtils sqlSourceUtilsSpy = PowerMockito.spy(sqlSourceUtils);
+			SQLSourceHelper sqlSourceUtils = new SQLSourceHelper(context);
+			SQLSourceHelper sqlSourceUtilsSpy = PowerMockito.spy(sqlSourceUtils);
 
 			when(rs.isBeforeFirst()).thenReturn(false);
 
 			sqlSourceUtils.updateStatusFile(rs);
-			assertEquals("Incremental value expected: 0", 0L, sqlSourceUtils.getIncrementalValue());
+			assertEquals("Incremental value expected: 0", 0L, sqlSourceUtils.getCurrentIndex());
 
 			PowerMockito.verifyPrivate(sqlSourceUtilsSpy, Mockito.never()).invoke("writeStatusFile");
 
@@ -123,8 +123,8 @@ public class SQLSourceUtilsTest {
 
 		try { 
 
-			SQLSourceUtils sqlSourceUtils = new SQLSourceUtils(context);
-			when(rs.getLong(sqlSourceUtils.getIncrementalColumnName())).thenReturn(10L);
+			SQLSourceHelper sqlSourceUtils = new SQLSourceHelper(context);
+			when(rs.getLong(sqlSourceUtils.getIndexColumnName())).thenReturn(10L);
 	
 			when(rs.isBeforeFirst()).thenReturn(true);
 	
@@ -152,15 +152,15 @@ public class SQLSourceUtilsTest {
 
 		when(context.getString("status.file.name")).thenReturn(file.getName());
 
-		SQLSourceUtils sqlSourceUtils = new SQLSourceUtils(context);
-		when(rs.getLong(sqlSourceUtils.getIncrementalColumnName())).thenReturn(10L);
+		SQLSourceHelper sqlSourceUtils = new SQLSourceHelper(context);
+		when(rs.getLong(sqlSourceUtils.getIndexColumnName())).thenReturn(10L);
 
 		when(rs.isBeforeFirst()).thenReturn(true);
 
 		sqlSourceUtils.updateStatusFile(rs);
 
-		SQLSourceUtils sqlSourceUtils2 = new SQLSourceUtils(context);
-		assertEquals(10L, sqlSourceUtils2.getIncrementalValue());
+		SQLSourceHelper sqlSourceUtils2 = new SQLSourceHelper(context);
+		assertEquals(10L, sqlSourceUtils2.getCurrentIndex());
 		;
 	}
 
