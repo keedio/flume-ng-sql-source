@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.flume.conf.ConfigurationException;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
@@ -64,7 +63,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     private HibernateHelper hibernateHelper;
        
     @Override
-    public void configure(Context context) throws ConfigurationException{
+    public void configure(Context context) {
         	
     	LOG.info("Reading and processing configuration values for source " + getName());
 		
