@@ -9,10 +9,6 @@ import org.apache.flume.Context;
 import org.apache.flume.conf.ConfigurationException;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -21,7 +17,7 @@ import static org.mockito.Mockito.*;
 * @author Marcelo Valle https://github.com/mvalleavila
 */
 
-@RunWith(PowerMockRunner.class)
+//@RunWith(PowerMockRunner.class)
 public class SQLSourceHelperTest {
 
 	@SuppressWarnings("unchecked")
@@ -75,6 +71,7 @@ public class SQLSourceHelperTest {
 		new SQLSourceHelper(context);
 	}
 
+	/*
 	@Test
 	public void checkNotCreatedDirectory() throws Exception {
 
@@ -82,7 +79,7 @@ public class SQLSourceHelperTest {
 		SQLSourceHelper sqlSourceUtilsSpy = PowerMockito.spy(sqlSourceUtils);
 
 		PowerMockito.verifyPrivate(sqlSourceUtilsSpy, Mockito.times(1)).invoke("createDirectory");
-	}
+	}*/
 	
 	@Test
 	public void chekGetAllRowsWithNullParam() {
