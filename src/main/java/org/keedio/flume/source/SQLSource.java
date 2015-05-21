@@ -20,7 +20,6 @@ package org.keedio.flume.source;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -60,9 +59,7 @@ import au.com.bytecode.opencsv.CSVWriter;
 public class SQLSource extends AbstractSource implements Configurable, PollableSource {
     
     private static final Logger log = LoggerFactory.getLogger(SQLSource.class);
-    private SqlDBEngine mDBEngine;
     protected SQLSourceHelper sqlSourceHelper;
-    private boolean isConnected;
     private SqlSourceCounter sqlSourceCounter;
     private CSVWriter csvWriter;
     private HibernateHelper hibernateHelper;
@@ -80,7 +77,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         sqlSourceCounter.start();
         
         /* Establish connection with database */
-        hibernateHelper = new HibernateHelper(context);
+        hibernateHelper = new HibernateHelper(sqlSourceHelper);
         hibernateHelper.establishSession();
        
         /* Instantiate the CSV Writer */
@@ -93,31 +90,23 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 		
 		try {
 			
-			List<List<Object>> result = hibernateHelper.executeQuery(sqlSourceHelper);
-			
+			List<List<Object>> result = hibernateHelper.executeQuery();
+						
 			if (!result.isEmpty())
-			{
-				String[] rowToCsv=null
-						;
-				for (int i=0; i<result.size();i++)
-				{	
-					List<Object> row = result.get(i);
-					rowToCsv = new String[row.size()];
-					for (int j=0; j< row.size(); j++){
-						rowToCsv[j] = row.get(j).toString();
-					}
-					csvWriter.writeNext(rowToCsv);
-				}
-				
+			{				
+				csvWriter.writeAll(sqlSourceHelper.getAllRows(result));
 				csvWriter.flush();
 				
+				sqlSourceHelper.updateStatusFile();
 			}
 			
-			sqlSourceHelper.updateStatusFile();
-			
+			if (result.size() < sqlSourceHelper.getMaxRows()){
+				Thread.sleep(sqlSourceHelper.getRunQueryDelay());
+			}
+						
 			return Status.READY;
 			
-		} catch (IOException e) {
+		} catch (IOException | InterruptedException e) {
 			log.error("Error procesing row", e);
 			return Status.BACKOFF;
 		}
@@ -136,21 +125,8 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         
         try 
         {
-            if (isConnected) {
-                log.info("Closing connection to database " + sqlSourceHelper.getConnectionURL());
-                mDBEngine.CloseConnection();
-            } else {
-                log.info("Nothing to close for " + sqlSourceHelper.getConnectionURL());
-            }
-            csvWriter.close();
-                
-        } catch (SQLException e) {
-            log.warn("Error closing database connection " + sqlSourceHelper.getConnectionURL());
-            try {
-				csvWriter.close();
-			} catch (IOException e1) {
-				log.warn("Error CSVWriter object ", e);
-			}
+            hibernateHelper.closeSession();
+            csvWriter.close();    
         } catch (IOException e) {
         	log.warn("Error CSVWriter object ", e);
         } finally {
