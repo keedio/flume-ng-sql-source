@@ -88,7 +88,15 @@ public class SQLSourceHelperTest {
 	public void chekGetAllRowsWithNullParam() {
 		
 		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
-		assertEquals(null,sqlSourceHelper.getAllRows(null));
+		assertEquals(new ArrayList<String>(),sqlSourceHelper.getAllRows(null));
+	}
+	
+	
+	@Test
+	public void chekGetAllRowsWithEmptyParam() {
+		
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		assertEquals(new ArrayList<String>(),sqlSourceHelper.getAllRows(new ArrayList<List<Object>>()));
 	}
 	
 	@SuppressWarnings("deprecation")

@@ -90,7 +90,7 @@ public class SQLSourceHelper {
 	
 	public List<String[]> getAllRows(List<List<Object>> queryResult){
 		
-		List<String[]> allRows = new ArrayList<String[]>(queryResult.size());
+		List<String[]> allRows = new ArrayList<String[]>();
 		
 		if (queryResult == null || queryResult.isEmpty())
 			return allRows;
