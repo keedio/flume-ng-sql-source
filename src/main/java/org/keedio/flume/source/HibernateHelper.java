@@ -13,51 +13,53 @@ import org.slf4j.LoggerFactory;
 
 public class HibernateHelper {
 
-	private static final Logger LOG = LoggerFactory.getLogger(HibernateHelper.class);
-	
+	private static final Logger LOG = LoggerFactory
+			.getLogger(HibernateHelper.class);
+
 	private static SessionFactory factory;
 	private Session session;
 	private Configuration config;
 	private SQLSourceHelper sqlSourceHelper;
-	
-	public HibernateHelper(SQLSourceHelper sqlSourceHelper){
-		
+
+	public HibernateHelper(SQLSourceHelper sqlSourceHelper) {
+
 		this.sqlSourceHelper = sqlSourceHelper;
-		
+
 		config = new Configuration()
-	    .setProperty("hibernate.connection.url", sqlSourceHelper.getConnectionURL())
-	    .setProperty("hibernate.connection.username", sqlSourceHelper.getUser())
-		.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword());
+				.setProperty("hibernate.connection.url", sqlSourceHelper.getConnectionURL())
+				.setProperty("hibernate.connection.username", sqlSourceHelper.getUser())
+				.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword());
 	}
 
 	public void establishSession() {
-		
+
 		LOG.info("Opening hibernate session");
-		
+
 		ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder()
 				.applySettings(config.getProperties()).build();
 		factory = config.buildSessionFactory(serviceRegistry);
-		session = factory.openSession();	
+		session = factory.openSession();
 	}
-	
+
 	public void closeSession() {
-		
+
 		LOG.info("Closing hibernate session");
-		
+
 		session.close();
 	}
-	
+
 	@SuppressWarnings("unchecked")
-	public List<List <Object>> executeQuery(){
-		
-		List<List<Object>> rowsList = session.createSQLQuery(sqlSourceHelper.getQuery())
-			    .setFirstResult(sqlSourceHelper.getCurrentIndex())
-			    .setMaxResults(sqlSourceHelper.getMaxRows())
-			    .setResultTransformer(Transformers.TO_LIST)
-			    .list();
-		
-		sqlSourceHelper.setCurrentIndex(sqlSourceHelper.getCurrentIndex() + rowsList.size());
-		
+	public List<List<Object>> executeQuery() {
+
+		List<List<Object>> rowsList = session
+				.createSQLQuery(sqlSourceHelper.getQuery())
+				.setFirstResult(sqlSourceHelper.getCurrentIndex())
+				.setMaxResults(sqlSourceHelper.getMaxRows())
+				.setResultTransformer(Transformers.TO_LIST).list();
+
+		sqlSourceHelper.setCurrentIndex(sqlSourceHelper.getCurrentIndex()
+				+ rowsList.size());
+
 		return rowsList;
 	}
 }

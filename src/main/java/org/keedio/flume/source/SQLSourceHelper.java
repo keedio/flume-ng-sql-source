@@ -120,7 +120,7 @@ public class SQLSourceHelper {
 			writer.write(Integer.toString(currentIndex)+" \n");
 			writer.close();
 		} catch (IOException e) {
-			LOG.error("Error writing incremental value to status file!!!",e.getMessage());
+			LOG.error("Error writing incremental value to status file!!!",e);
 		}		
 	}
 	
@@ -148,7 +148,7 @@ public class SQLSourceHelper {
 					return configuredStartValue;
 				}
 			} catch (NumberFormatException | IOException e) {
-				LOG.error("Corrupt index value in file!!! Deleting it.", e.getMessage());
+				LOG.error("Corrupt index value in file!!! Deleting it.", e);
 				deleteStatusFile();
 				return configuredStartValue;
 			}

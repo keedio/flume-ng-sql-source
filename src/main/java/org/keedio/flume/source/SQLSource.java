@@ -111,6 +111,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 		}
 	}
  
+	@Override
     public void start() {
         
     	LOG.info("Starting sql source {} ...", getName());
