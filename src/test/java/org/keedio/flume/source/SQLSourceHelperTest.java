@@ -228,4 +228,11 @@ public class SQLSourceHelperTest {
 		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
 		assertEquals("SELECT * FROM table",sqlSourceHelper.getQuery());
 	}
+	
+	@Test
+	public void getCustomQuery() {
+		when(context.getString("custom.query")).thenReturn("SELECT column FROM table");
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		assertEquals("SELECT column FROM table",sqlSourceHelper.getQuery());
+	}
 }
