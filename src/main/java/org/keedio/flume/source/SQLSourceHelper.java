@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 
 public class SQLSourceHelper {
 	
-	private static final Logger log = LoggerFactory.getLogger(SQLSourceHelper.class);
+	private static final Logger LOG = LoggerFactory.getLogger(SQLSourceHelper.class);
 	
 	private File file,directory;
 	private int runQueryDelay, batchSize, maxRows, currentIndex;
@@ -36,7 +36,7 @@ public class SQLSourceHelper {
 	private static final int DEFAULT_INCREMENTAL_VALUE = 0;
 
 	
-	public SQLSourceHelper(Context context) throws ConfigurationException {
+	public SQLSourceHelper(Context context){
 		
 		statusFilePath = context.getString("status.file.path", DEFAULT_STATUS_DIRECTORY);
 		statusFileName = context.getString("status.file.name");
@@ -90,11 +90,12 @@ public class SQLSourceHelper {
 	
 	public List<String[]> getAllRows(List<List<Object>> queryResult){
 		
-		if (queryResult == null)
-			return null;
+		List<String[]> allRows = new ArrayList<String[]>(queryResult.size());
+		
+		if (queryResult == null || queryResult.isEmpty())
+			return allRows;
 		
 		String[] row=null;
-		List<String[]> allRows = new ArrayList<String[]>(queryResult.size());
 		
 		for (int i=0; i<queryResult.size();i++)
 		{	
@@ -119,15 +120,14 @@ public class SQLSourceHelper {
 			writer.write(Integer.toString(currentIndex)+" \n");
 			writer.close();
 		} catch (IOException e) {
-			log.error("Error writing incremental value to status file!!!");
-			
+			LOG.error("Error writing incremental value to status file!!!",e.getMessage());
 		}		
 	}
 	
 	private int getStatusFileIndex(int configuredStartValue) {
 		
 		if (!isStatusFileCreated()) {
-			log.info("Status file not created, using start value from config file");
+			LOG.info("Status file not created, using start value from config file");
 			return configuredStartValue;
 		}
 		else{
@@ -138,17 +138,17 @@ public class SQLSourceHelper {
 				String[] statusInfo = new String(chars).split(" ");
 				if (statusInfo[0].equals(connectionURL) && statusInfo[1].equals(table)) {
 					reader.close();
-					log.info(statusFilePath + "/" + statusFileName + " correctly formed");				
+					LOG.info(statusFilePath + "/" + statusFileName + " correctly formed");				
 					return Integer.parseInt(statusInfo[2]);
 				}
 				else{
-					log.warn(statusFilePath + "/" + statusFileName + " corrupt!!! Deleting it.");
+					LOG.warn(statusFilePath + "/" + statusFileName + " corrupt!!! Deleting it.");
 					reader.close();
 					deleteStatusFile();
 					return configuredStartValue;
 				}
 			} catch (NumberFormatException | IOException e) {
-				log.error("Corrupt index value in file!!! Deleting it.");
+				LOG.error("Corrupt index value in file!!! Deleting it.", e.getMessage());
 				deleteStatusFile();
 				return configuredStartValue;
 			}
@@ -157,14 +157,14 @@ public class SQLSourceHelper {
 	
 	private void deleteStatusFile() {
 		if (file.delete()){
-			log.info("Deleted status file: {}",file.getAbsolutePath());
+			LOG.info("Deleted status file: {}",file.getAbsolutePath());
 		}else{
-			log.warn("Error deleting file: {}",file.getAbsolutePath());
+			LOG.warn("Error deleting file: {}",file.getAbsolutePath());
 		}
 			
 	}
 	
-	private void checkMandatoryProperties() throws ConfigurationException {
+	private void checkMandatoryProperties() {
 		
 		if (statusFileName == null){
 			throw new ConfigurationException("status.file.name property not set");
@@ -182,9 +182,9 @@ public class SQLSourceHelper {
 			throw new ConfigurationException("user property not set");
 		}
 	}
-       
+
 	/*
-	@return String connectionURL
+	 * @return String connectionURL
 	 */
 	String getConnectionURL() {            
 		return connectionURL;

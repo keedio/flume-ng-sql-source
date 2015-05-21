@@ -50,15 +50,14 @@ import au.com.bytecode.opencsv.CSVWriter;
  * <tt>password: </tt> user password <p>
  * <tt>table: </tt> table to read from <p>
  * <tt>columns.to.select </tt> columns to select for import data (* will import all) <p>
- * <tt>incremental.column.name </tt> column name for incremental import <p>
- * <tt>incremental.value </tt> TODO: Change this to read from file the value <p>
+ * <tt>incremental.value </tt> Start value to import data <p>
  * <tt>run.query.delay </tt> delay time to do each query to database <p>
  * 
  * @author Marcelo Valle https://github.com/mvalleavila
  */
 public class SQLSource extends AbstractSource implements Configurable, PollableSource {
     
-    private static final Logger log = LoggerFactory.getLogger(SQLSource.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SQLSource.class);
     protected SQLSourceHelper sqlSourceHelper;
     private SqlSourceCounter sqlSourceCounter;
     private CSVWriter csvWriter;
@@ -67,7 +66,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     @Override
     public void configure(Context context) throws ConfigurationException{
         	
-    	log.info("Reading and processing configuration values for source " + getName());
+    	LOG.info("Reading and processing configuration values for source " + getName());
 		
     	/* Initialize configuration parameters */
     	sqlSourceHelper = new SQLSourceHelper(context);
@@ -107,28 +106,28 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 			return Status.READY;
 			
 		} catch (IOException | InterruptedException e) {
-			log.error("Error procesing row", e);
+			LOG.error("Error procesing row", e);
 			return Status.BACKOFF;
 		}
 	}
  
-    public void start(Context context) {
+    public void start() {
         
-    	log.info("Starting sql source {} ...", getName());
+    	LOG.info("Starting sql source {} ...", getName());
         super.start();
     }
 
     @Override
     public void stop() {
         
-        log.info("Stopping sql source {} ...", getName());
+        LOG.info("Stopping sql source {} ...", getName());
         
         try 
         {
             hibernateHelper.closeSession();
             csvWriter.close();    
         } catch (IOException e) {
-        	log.warn("Error CSVWriter object ", e);
+        	LOG.warn("Error CSVWriter object ", e);
         } finally {
         	this.sqlSourceCounter.stop();
         	super.stop();

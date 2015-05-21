@@ -13,10 +13,11 @@ import org.slf4j.LoggerFactory;
 
 public class HibernateHelper {
 
+	private static final Logger LOG = LoggerFactory.getLogger(HibernateHelper.class);
+	
 	private static SessionFactory factory;
 	private Session session;
 	private Configuration config;
-	private static final Logger log = LoggerFactory.getLogger(HibernateHelper.class);
 	private SQLSourceHelper sqlSourceHelper;
 	
 	public HibernateHelper(SQLSourceHelper sqlSourceHelper){
@@ -31,7 +32,7 @@ public class HibernateHelper {
 
 	public void establishSession() {
 		
-		log.info("Opening hibernate session");
+		LOG.info("Opening hibernate session");
 		
 		ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder()
 				.applySettings(config.getProperties()).build();
@@ -41,7 +42,7 @@ public class HibernateHelper {
 	
 	public void closeSession() {
 		
-		log.info("Closing hibernate session");
+		LOG.info("Closing hibernate session");
 		
 		session.close();
 	}
