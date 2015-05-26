@@ -34,8 +34,7 @@ public class HibernateHelper {
 		config = new Configuration()
 				.setProperty("hibernate.connection.url", sqlSourceHelper.getConnectionURL())
 				.setProperty("hibernate.connection.username", sqlSourceHelper.getUser())
-				.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword())
-				.setProperty("hibernate.connection.driver_class", "net.sf.log4jdbc.DriverSpy");
+				.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword());
 		
 	}
 

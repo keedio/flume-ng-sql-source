@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.apache.flume.Context;
 import org.apache.flume.conf.ConfigurationException;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -20,8 +21,6 @@ import static org.mockito.Mockito.*;
 //@RunWith(PowerMockRunner.class)
 public class SQLSourceHelperTest {
 
-	@SuppressWarnings("unchecked")
-	List <List<Object>> queryResult = mock(ArrayList.class);
 	Context context = mock(Context.class);
 
 	@Before
@@ -188,7 +187,6 @@ public class SQLSourceHelperTest {
 		assertEquals(true, file.isDirectory());
 		if (file.exists()){
 			file.delete();
-			file.getParentFile().delete();
 		}
 	}
 	
@@ -240,5 +238,13 @@ public class SQLSourceHelperTest {
 		when(context.getString("custom.query")).thenReturn("SELECT column FROM table");
 		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
 		assertEquals("SELECT column FROM table",sqlSourceHelper.getQuery());
+	}
+	
+	@After
+	public void deleteDirectory(){
+		File file = new File("/tmp/flume");
+		if (file.exists()){
+			file.delete();
+		}
 	}
 }

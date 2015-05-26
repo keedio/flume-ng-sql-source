@@ -168,7 +168,6 @@ public class SQLSourceHelper {
 		}else{
 			LOG.warn("Error deleting file: {}",file.getAbsolutePath());
 		}
-			
 	}
 	
 	private void checkMandatoryProperties() {
