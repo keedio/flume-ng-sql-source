@@ -72,7 +72,6 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         
     	/* Initialize metric counters */
 		sqlSourceCounter = new SqlSourceCounter("SOURCESQL." + this.getName());
-        sqlSourceCounter.start();
         
         /* Establish connection with database */
         hibernateHelper = new HibernateHelper(sqlSourceHelper);
@@ -87,6 +86,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 	public Status process() throws EventDeliveryException {
 		
 		try {
+			sqlSourceCounter.startProcess();			
 			
 			List<List<Object>> result = hibernateHelper.executeQuery();
 						
@@ -94,9 +94,12 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 			{				
 				csvWriter.writeAll(sqlSourceHelper.getAllRows(result));
 				csvWriter.flush();
+				sqlSourceCounter.incrementEventCount(result.size());
 				
 				sqlSourceHelper.updateStatusFile();
 			}
+			
+			sqlSourceCounter.endProcess(result.size());
 			
 			if (result.size() < sqlSourceHelper.getMaxRows()){
 				Thread.sleep(sqlSourceHelper.getRunQueryDelay());
@@ -114,6 +117,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     public void start() {
         
     	LOG.info("Starting sql source {} ...", getName());
+        sqlSourceCounter.start();
         super.start();
     }
 

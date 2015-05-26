@@ -89,8 +89,8 @@ public class SQLSourceHelperTest {
 		
 		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
 		assertEquals(new ArrayList<String>(),sqlSourceHelper.getAllRows(null));
+		
 	}
-	
 	
 	@Test
 	public void chekGetAllRowsWithEmptyParam() {
@@ -181,6 +181,7 @@ public class SQLSourceHelperTest {
 		assertEquals("jdbc:mysql://host:3306/database", sqlSourceHelper.getConnectionURL());
 	}
 	
+	@SuppressWarnings("unused")
 	@Test
 	public void createDirectory() {
 		

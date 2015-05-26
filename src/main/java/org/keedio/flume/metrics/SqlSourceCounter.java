@@ -12,71 +12,62 @@
  */
 package org.keedio.flume.metrics;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.flume.instrumentation.MonitoredCounterGroup;
 
 /**
  *
  * @author Luis Lázaro <lalazaro@keedio.com>
+ * @author <a href="mailto:mvalle@keedio.com">Marcelo Valle</a>
  */
 public class SqlSourceCounter extends MonitoredCounterGroup implements SqlSourceCounterMBean {
 
-    private static long rows_count,
-            rows_proc,
-            sendThroughput,
-            eventCount,
-            last_sent,
-            start_time;
-
-    private static final String[] ATTRIBUTES = {"rows_count", "rows_proc", "sendThroughput",
-        "eventCount", "last_sent", "start_time"};
-
+	private long startProcessTime;
+	
+	private static final String AVERAGE_THROUGHPUT = "average_throughput";
+	private static final String CURRENT_THROUGHPUT = "current_throughput";	
+	private static final String EVENT_COUNT = "events_count";
+    
+    private static final String[] ATTRIBUTES = {AVERAGE_THROUGHPUT, CURRENT_THROUGHPUT, EVENT_COUNT};
+    
     public SqlSourceCounter(String name) {
         super(MonitoredCounterGroup.Type.SOURCE, name, ATTRIBUTES);
-        rows_count = 0;
-        rows_proc = 0;
-        sendThroughput = 0;
-        eventCount = 0;
-        last_sent = 0;
-        start_time = System.currentTimeMillis();
     }
 
     @Override
-    public long getRowsCount() {
-        return rows_count;
-    }
-
-    @Override
-    public void incrementRowsCount() {
-        rows_count++;
-    }
-
-    @Override
-    public long getRowsProc() {
-        return rows_proc;
-    }
-
-    @Override
-    public void incrementRowsProc() {
-        rows_proc++;
-    }
-
-    @Override
-    public void incrementEventCount() {
-        last_sent = System.currentTimeMillis();
-        eventCount++;
-        if (last_sent - start_time >= 1000) {
-            long secondsElapsed = (last_sent - start_time) / 1000;
-            sendThroughput = eventCount / secondsElapsed;
+    public void incrementEventCount(int value) {
+        long last_sent = System.currentTimeMillis();
+        addAndGet(EVENT_COUNT, value);
+        if (last_sent - getStartTime() >= 1000) {
+            long secondsElapsed = (last_sent - getStartTime()) / 1000;
+            set(AVERAGE_THROUGHPUT, get(EVENT_COUNT) / secondsElapsed);
         }
     }
 
     @Override
     public long getEventCount() {
-        return eventCount;
+        return get(EVENT_COUNT);
     }
 
     @Override
-    public long getSendThroughput() {
-        return sendThroughput;
+    public long getAverageThroughput() {
+        return get(AVERAGE_THROUGHPUT);
+    }
+    
+    @Override
+    public long getCurrentThroughput() {
+        return get(CURRENT_THROUGHPUT);
+    }
+    
+    
+    public void startProcess(){
+    	startProcessTime = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());
+    }
+    
+    public void endProcess(int events){
+    	long stopProccessTime = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());
+    	long throughput = events / (stopProccessTime - startProcessTime);
+    	set(CURRENT_THROUGHPUT,throughput);
     }
 }

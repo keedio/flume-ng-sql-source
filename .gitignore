@@ -3,3 +3,4 @@
 .project
 .settings/*
 dependency-reduced-pom.xml
+/doc

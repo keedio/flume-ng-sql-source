@@ -25,11 +25,8 @@ package org.keedio.flume.metrics;
  * @author Luis Lázaro <lalazaro@keedio.com>
  */
 public interface SqlSourceCounterMBean {
-    public long getRowsCount();
-    public void incrementRowsCount();
-    public long getRowsProc();
-    public void incrementRowsProc();
     public long getEventCount();
-    public void incrementEventCount();
-    public long getSendThroughput();
+    public void incrementEventCount(int value);
+    public long getAverageThroughput();
+    public long getCurrentThroughput();
 }

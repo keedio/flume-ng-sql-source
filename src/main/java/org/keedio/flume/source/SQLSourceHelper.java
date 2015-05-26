@@ -16,8 +16,10 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- *  * @author Marcelo Valle https://github.com/mvalleavila
- *  * @modified Luis Lazaro
+ *  Helper to manage configuration parameters and utility methods
+ * 
+ *  @author <a href="mailto:mvalle@keedio.com">Marcelo Valle</a>
+ *  @modified Luis Lazaro
  */
 
 public class SQLSourceHelper {
@@ -35,7 +37,11 @@ public class SQLSourceHelper {
 	private static final int DEFAULT_MAX_ROWS = 10000;
 	private static final int DEFAULT_INCREMENTAL_VALUE = 0;
 
-	
+	/**
+	 * Builds an SQLSourceHelper containing the configuration parameters and
+	 * usefull utils for SQL Source
+	 * @param context Flume source context, contains the properties from configuration file
+	 */
 	public SQLSourceHelper(Context context){
 		
 		statusFilePath = context.getString("status.file.path", DEFAULT_STATUS_DIRECTORY);
@@ -79,15 +85,16 @@ public class SQLSourceHelper {
 		return file.exists() && !file.isDirectory() ? true: false;
 	}
 	
-        
-	/*
-	@return boolean abstract File as directory if exists
-	 */
 	private boolean isStatusDirectoryCreated() {
 		return directory.exists() && !directory.isFile() ? true: false;
 	}
 	
-	
+	/**
+	 * Converter from List<List<Object>> query result to List<String[]>
+	 * for csvWriter
+	 * @param queryResult Query Result from hibernate executeQuery method
+	 * @return A list of String arrays, ready for csvWriter.writeall method
+	 */
 	public List<String[]> getAllRows(List<List<Object>> queryResult){
 		
 		List<String[]> allRows = new ArrayList<String[]>();

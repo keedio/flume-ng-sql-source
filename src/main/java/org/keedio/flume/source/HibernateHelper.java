@@ -11,6 +11,12 @@ import org.hibernate.transform.Transformers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Helper class to manage hibernate sessions and perform queries
+ * 
+ * @author <a href="mailto:mvalle@keedio.com">Marcelo Valle</a>
+ *
+ */
 public class HibernateHelper {
 
 	private static final Logger LOG = LoggerFactory
@@ -28,7 +34,9 @@ public class HibernateHelper {
 		config = new Configuration()
 				.setProperty("hibernate.connection.url", sqlSourceHelper.getConnectionURL())
 				.setProperty("hibernate.connection.username", sqlSourceHelper.getUser())
-				.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword());
+				.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword())
+				.setProperty("hibernate.connection.driver_class", "net.sf.log4jdbc.DriverSpy");
+		
 	}
 
 	public void establishSession() {
