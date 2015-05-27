@@ -38,8 +38,8 @@ public class HibernateHelper {
 		config = new Configuration()
 				.setProperty("hibernate.connection.url", sqlSourceHelper.getConnectionURL())
 				.setProperty("hibernate.connection.username", sqlSourceHelper.getUser())
-				.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword());
-		
+				.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword())
+				.setProperty("hibernate.dialect", "org.keedio.flume.source.SQLSourceDialect");
 	}
 
 	/**
