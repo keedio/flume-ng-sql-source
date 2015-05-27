@@ -40,19 +40,9 @@ import au.com.bytecode.opencsv.CSVWriter;
 
 
 /**
- * A Source to read data from a SQL database. This source ask for new data in a table each configured time.
- * An incremental column is required to use this source (e.g timestamp), every time some data is imported
- * the source counter is increased to start importing new rows<p>
- * <tt>type: </tt> org.apache.flume.source.SQLSource <p>
- * <tt>connection.url: </tt> database connnection URL <p>
- * <tt>user: </tt> user to connect to database <p>
- * <tt>password: </tt> user password <p>
- * <tt>table: </tt> table to read from <p>
- * <tt>columns.to.select </tt> columns to select for import data (* will import all) <p>
- * <tt>incremental.value </tt> Start value to import data <p>
- * <tt>run.query.delay </tt> delay time to do each query to database <p>
+ * A Source to read data from a SQL database. This source ask for new data in a table each configured time.<p>
  * 
- * @author Marcelo Valle https://github.com/mvalleavila
+ * @author <a href="mailto:mvalle@keedio.com">Marcelo Valle</a>
  */
 public class SQLSource extends AbstractSource implements Configurable, PollableSource {
     
@@ -62,6 +52,9 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     private CSVWriter csvWriter;
     private HibernateHelper hibernateHelper;
        
+    /**
+     * Configure the source, load configuration properties and establish connection with database
+     */
     @Override
     public void configure(Context context) {
         	
@@ -82,6 +75,9 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         
     }  
     
+    /**
+     * Process a batch of events performing SQL Queries
+     */
 	@Override
 	public Status process() throws EventDeliveryException {
 		
@@ -113,6 +109,9 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 		}
 	}
  
+	/**
+	 * Starts the source. Starts the metrics counter.
+	 */
 	@Override
     public void start() {
         
@@ -121,6 +120,9 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         super.start();
     }
 
+	/**
+	 * Stop the source. Close database connection and stop metrics counter.
+	 */
     @Override
     public void stop() {
         

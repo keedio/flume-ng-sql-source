@@ -12,13 +12,11 @@
  */
 package org.keedio.flume.metrics;
 
-import java.util.concurrent.TimeUnit;
-
 import org.apache.flume.instrumentation.MonitoredCounterGroup;
 
 /**
  *
- * @author Luis Lázaro <lalazaro@keedio.com>
+ * @author <a href="mailto:lalazaro@keedio.com">Luis Lazaro</a>
  * @author <a href="mailto:mvalle@keedio.com">Marcelo Valle</a>
  */
 public class SqlSourceCounter extends MonitoredCounterGroup implements SqlSourceCounterMBean {
@@ -26,10 +24,11 @@ public class SqlSourceCounter extends MonitoredCounterGroup implements SqlSource
 	private long startProcessTime;
 	
 	private static final String AVERAGE_THROUGHPUT = "average_throughput";
-	private static final String CURRENT_THROUGHPUT = "current_throughput";	
+	private static final String CURRENT_THROUGHPUT = "current_throughput";
+	private static final String MAX_THROUGHPUT = "max_throughput";
 	private static final String EVENT_COUNT = "events_count";
     
-    private static final String[] ATTRIBUTES = {AVERAGE_THROUGHPUT, CURRENT_THROUGHPUT, EVENT_COUNT};
+    private static final String[] ATTRIBUTES = {AVERAGE_THROUGHPUT, CURRENT_THROUGHPUT, MAX_THROUGHPUT, EVENT_COUNT};
     
     public SqlSourceCounter(String name) {
         super(MonitoredCounterGroup.Type.SOURCE, name, ATTRIBUTES);
@@ -37,12 +36,7 @@ public class SqlSourceCounter extends MonitoredCounterGroup implements SqlSource
 
     @Override
     public void incrementEventCount(int value) {
-        long last_sent = System.currentTimeMillis();
         addAndGet(EVENT_COUNT, value);
-        if (last_sent - getStartTime() >= 1000) {
-            long secondsElapsed = (last_sent - getStartTime()) / 1000;
-            set(AVERAGE_THROUGHPUT, get(EVENT_COUNT) / secondsElapsed);
-        }
     }
 
     @Override
@@ -60,14 +54,28 @@ public class SqlSourceCounter extends MonitoredCounterGroup implements SqlSource
         return get(CURRENT_THROUGHPUT);
     }
     
+    @Override
+    public long getMaxThroughput() {
+        return get(MAX_THROUGHPUT);
+    }
+    
     
     public void startProcess(){
-    	startProcessTime = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());
+    	startProcessTime = System.currentTimeMillis();
     }
     
     public void endProcess(int events){
-    	long stopProccessTime = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());
-    	long throughput = events / (stopProccessTime - startProcessTime);
+    	
+    	long runningTime = System.currentTimeMillis() - getStartTime();
+    	long processTime = System.currentTimeMillis() - startProcessTime;
+    	long throughput = 0L;
+    	
+    	if (events > 0 && processTime > 0)
+    		throughput = 1000*events/processTime;
+    		if (getMaxThroughput() < throughput)
+    			set(MAX_THROUGHPUT,throughput);
+    	
+    	set(AVERAGE_THROUGHPUT, getEventCount()/(runningTime/1000));
     	set(CURRENT_THROUGHPUT,throughput);
     }
 }

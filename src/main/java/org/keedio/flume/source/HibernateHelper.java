@@ -27,6 +27,10 @@ public class HibernateHelper {
 	private Configuration config;
 	private SQLSourceHelper sqlSourceHelper;
 
+	/**
+	 * Constructor to initialize hibernate configuration parameters
+	 * @param sqlSourceHelper Contains the configuration parameters from flume config file
+	 */
 	public HibernateHelper(SQLSourceHelper sqlSourceHelper) {
 
 		this.sqlSourceHelper = sqlSourceHelper;
@@ -38,6 +42,9 @@ public class HibernateHelper {
 		
 	}
 
+	/**
+	 * Connect to database using hibernate
+	 */
 	public void establishSession() {
 
 		LOG.info("Opening hibernate session");
@@ -48,6 +55,9 @@ public class HibernateHelper {
 		session = factory.openSession();
 	}
 
+	/**
+	 * Close database connection
+	 */
 	public void closeSession() {
 
 		LOG.info("Closing hibernate session");
@@ -55,6 +65,12 @@ public class HibernateHelper {
 		session.close();
 	}
 
+	/**
+	 * Execute the selection query in the database
+	 * @return The query result. Each Object is a cell content. <p>
+	 * The cell contents use database types (date,int,string...), 
+	 * keep in mind in case of future conversions/castings.
+	 */
 	@SuppressWarnings("unchecked")
 	public List<List<Object>> executeQuery() {
 

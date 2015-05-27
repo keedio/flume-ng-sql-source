@@ -16,10 +16,25 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- *  Helper to manage configuration parameters and utility methods
+ *  Helper to manage configuration parameters and utility methods <p>
+ * 
+ * Configuration parameters readed from flume configuration file:
+ * <tt>type: </tt> org.keedio.flume.source.SQLSource <p>
+ * <tt>connection.url: </tt> database connection URL <p>
+ * <tt>user: </tt> user to connect to database <p>
+ * <tt>password: </tt> user password <p>
+ * <tt>table: </tt> table to read from <p>
+ * <tt>columns.to.select: </tt> columns to select for import data (* will import all) <p>
+ * <tt>incremental.value: </tt> Start value to import data <p>
+ * <tt>run.query.delay: </tt> delay time to execute each query to database <p>
+ * <tt>status.file.path: </tt> Directory to save status file <p>
+ * <tt>status.file.name: </tt> Name for status file (saves last row index processed) <p>
+ * <tt>batch.size: </tt> Batch size to send events from flume source to flume channel <p>
+ * <tt>max.rows: </tt> Max rows to import from DB in one query <p>
+ * <tt>custom.query: </tt> Custom query to execute to database (be careful) <p>
  * 
  *  @author <a href="mailto:mvalle@keedio.com">Marcelo Valle</a>
- *  @modified Luis Lazaro
+ *  @author <a href="mailto:lalazaro@keedio.com">Luis Lazaro</a>
  */
 
 public class SQLSourceHelper {
@@ -90,8 +105,8 @@ public class SQLSourceHelper {
 	}
 	
 	/**
-	 * Converter from List<List<Object>> query result to List<String[]>
-	 * for csvWriter
+	 * Converter from a List of Object List to a List of String arrays <p>
+	 * Useful for csvWriter
 	 * @param queryResult Query Result from hibernate executeQuery method
 	 * @return A list of String arrays, ready for csvWriter.writeall method
 	 */
@@ -117,7 +132,9 @@ public class SQLSourceHelper {
 		return allRows;
 	}
 	
-        
+    /**
+     * Update status file with last read row index    
+     */
 	public void updateStatusFile() {
 		/* Status file creation or update */
 		try {
