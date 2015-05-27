@@ -124,7 +124,10 @@ public class SQLSourceHelper {
 			List<Object> rawRow = queryResult.get(i);
 			row = new String[rawRow.size()];
 			for (int j=0; j< rawRow.size(); j++){
-				row[j] = rawRow.get(j).toString();
+				if (rawRow.get(j) != null)
+					row[j] = rawRow.get(j).toString();
+				else
+					row[j] = "";
 			}
 			allRows.add(row);
 		}
