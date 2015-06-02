@@ -77,7 +77,7 @@ Configuration example
 agent.sources = sql-source
 agent.sources.sql-source.type = org.keedio.flume.source.SQLSource  
 
-# URL to connect to database (currently only mysql is supported)
+# URL to connect to database
 agent.sources.sql-source.connection.url = jdbc:mysql://host:port/database
 
 # Database connection properties
