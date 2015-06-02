@@ -3,3 +3,6 @@
 .project
 .settings/*
 dependency-reduced-pom.xml
+/doc
+.idea
+*.iml

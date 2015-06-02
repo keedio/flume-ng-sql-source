@@ -46,6 +46,7 @@ Mandatory properties in <b>bold</b>
 
 | Property Name | Default | Description |
 | ----------------------- | :-----: | :---------- |
+| <b>channels</b> | - | Connected channel names |
 | <b>type</b> | - | The component type name, needs to be org.keedio.flume.source.SQLSource  |
 | <b>connection.url</b> | - | Url to connect with the remote Database |
 | <b>user</b> | - | Username to connect with the database |
@@ -102,6 +103,9 @@ agent.sources.sql-source.status.file.name = sql-source.status
 agent.sources.sql-source.custom.query = SELECT * FROM table WHERE something;
 agent.sources.sql-source.batch.size = 1000;
 agent.sources.sql-source.max.rows = 10000;
+
+# Connected channel names
+agent.sources.sql-source.channels = memoryChannel
 
 ```
 
