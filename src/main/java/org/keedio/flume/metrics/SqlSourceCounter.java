@@ -12,6 +12,8 @@
  */
 package org.keedio.flume.metrics;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.flume.instrumentation.MonitoredCounterGroup;
 
 /**
@@ -66,16 +68,18 @@ public class SqlSourceCounter extends MonitoredCounterGroup implements SqlSource
     
     public void endProcess(int events){
     	
-    	long runningTime = System.currentTimeMillis() - getStartTime();
-    	long processTime = System.currentTimeMillis() - startProcessTime;
+    	long runningTime = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - getStartTime());
+    	long processTime = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startProcessTime);
     	long throughput = 0L;
     	
     	if (events > 0 && processTime > 0)
-    		throughput = 1000*events/processTime;
+    		throughput = events/processTime;
     		if (getMaxThroughput() < throughput)
     			set(MAX_THROUGHPUT,throughput);
     	
-    	set(AVERAGE_THROUGHPUT, getEventCount()/(runningTime/1000));
+    	if (runningTime > 0 && getEventCount() > 0)
+    		set(AVERAGE_THROUGHPUT, (getEventCount()/runningTime));
+    	
     	set(CURRENT_THROUGHPUT,throughput);
     }
 }
