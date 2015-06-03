@@ -60,6 +60,8 @@ Mandatory properties in <b>bold</b>
 | batch.size| 100 | Batch size to send events to flume channel |
 | max.rows | 10000| Max rows to import per query |
 | custom.query | - | Custom query to force a special request to the DB, be carefull. Check below explanation of this property. |
+| hibernate.connection.driver_class | -| Driver class to use by hibernate, if not specified the framework will auto asign one |
+| hibernate.dialect | - | Dialect to use by hibernate, if not specified the framework will auto asign one |
 
 Custom Query
 -------------
@@ -108,6 +110,17 @@ agent.sources.sql-source.max.rows = 10000;
 agent.sources.sql-source.channels = memoryChannel
 
 ```
+
+Troubles
+---------
+An issue with Java SQL Types and Hibernate Types could appear Using SQL Server databases and SQL Server Dialect coming with Hibernate.  
+  
+Something like:
+```
+org.hibernate.MappingException: No Dialect mapping for JDBC type: -15
+```
+
+Use ```org.keedio.flume.source.SQLServerCustomDialect``` in flume configuration file to solve this problem.
 
 Special thanks
 ---------------

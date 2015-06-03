@@ -1,16 +1,16 @@
 package org.keedio.flume.source;
 
-import org.hibernate.dialect.Dialect;
+import org.hibernate.dialect.SQLServerDialect;
 import org.hibernate.type.StandardBasicTypes;
 
 import java.sql.Types;
 
-public class SQLSourceDialect extends Dialect {
+public class SQLServerCustomDialect extends SQLServerDialect {
 
 	/**
 	 * Initializes a new instance of the {@link SQLServerDialect} class.
 	 */
-	public SQLSourceDialect() {	
+	public SQLServerCustomDialect(){	
 		registerHibernateType(Types.ARRAY, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.BIGINT, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.BINARY, StandardBasicTypes.STRING.getName());
@@ -38,15 +38,12 @@ public class SQLSourceDialect extends Dialect {
 		registerHibernateType(Types.OTHER, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.REAL, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.REF, StandardBasicTypes.STRING.getName());
-		registerHibernateType(Types.REF_CURSOR, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.ROWID, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.SMALLINT, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.SQLXML, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.STRUCT, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.TIME, StandardBasicTypes.STRING.getName());
-		registerHibernateType(Types.TIME_WITH_TIMEZONE, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.TIMESTAMP, StandardBasicTypes.STRING.getName());
-		registerHibernateType(Types.TIMESTAMP_WITH_TIMEZONE, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.TINYINT, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.VARBINARY, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.VARCHAR, StandardBasicTypes.STRING.getName());

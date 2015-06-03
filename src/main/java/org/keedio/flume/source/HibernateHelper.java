@@ -38,8 +38,12 @@ public class HibernateHelper {
 		config = new Configuration()
 				.setProperty("hibernate.connection.url", sqlSourceHelper.getConnectionURL())
 				.setProperty("hibernate.connection.username", sqlSourceHelper.getUser())
-				.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword())
-				.setProperty("hibernate.dialect", "org.keedio.flume.source.SQLSourceDialect");
+				.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword());
+		
+		if (sqlSourceHelper.getHibernateDialect() != null)
+			config.setProperty("hibernate.dialect", sqlSourceHelper.getHibernateDialect());
+		if (sqlSourceHelper.getHibernateDriver() != null)
+			config.setProperty("hibernate.connection.driver_class", sqlSourceHelper.getHibernateDriver());
 	}
 
 	/**
@@ -78,7 +82,7 @@ public class HibernateHelper {
 				.createSQLQuery(sqlSourceHelper.getQuery())
 				.setFirstResult(sqlSourceHelper.getCurrentIndex())
 				.setMaxResults(sqlSourceHelper.getMaxRows())
-				.setResultTransformer(Transformers.TO_LIST).list();
+				.setResultTransformer(Transformers.TO_LIST).list();				
 
 		sqlSourceHelper.setCurrentIndex(sqlSourceHelper.getCurrentIndex()
 				+ rowsList.size());
