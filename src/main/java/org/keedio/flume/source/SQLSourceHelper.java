@@ -44,7 +44,8 @@ public class SQLSourceHelper {
 	private File file,directory;
 	private int runQueryDelay, batchSize, maxRows, currentIndex;
 	private String statusFilePath, statusFileName, connectionURL, table,
-    columnsToSelect, user, password, customQuery, query;
+    columnsToSelect, user, password, customQuery, query, hibernateDialect,
+    hibernateDriver;
 	
 	private static final String DEFAULT_STATUS_DIRECTORY = "/var/lib/flume";
 	private static final int DEFAULT_QUERY_DELAY = 10000;
@@ -71,6 +72,8 @@ public class SQLSourceHelper {
 		customQuery = context.getString("custom.query");
 		batchSize = context.getInteger("batch.size",DEFAULT_BATCH_SIZE);
 		maxRows = context.getInteger("max.rows",DEFAULT_MAX_ROWS);
+		hibernateDialect = context.getString("hibernate.dialect");
+		hibernateDriver = context.getString("hibernate.connection.driver_class");
 		
 		checkMandatoryProperties();
                 
@@ -268,6 +271,16 @@ public class SQLSourceHelper {
 	
 	String getQuery() {
 		return query;
+	}
+
+
+	String getHibernateDialect() {
+		return hibernateDialect;
+	}
+
+
+	String getHibernateDriver() {
+		return hibernateDriver;
 	}
 	
 }
