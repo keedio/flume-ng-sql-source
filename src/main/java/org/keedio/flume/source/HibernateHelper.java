@@ -38,9 +38,12 @@ public class HibernateHelper {
 		config = new Configuration()
 				.setProperty("hibernate.connection.url", sqlSourceHelper.getConnectionURL())
 				.setProperty("hibernate.connection.username", sqlSourceHelper.getUser())
-				.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword())
-				.setProperty("hibernate.dialect", sqlSourceHelper.getHibernateDialect())
-				.setProperty("hibernate.connection.driver_class", sqlSourceHelper.getHibernateDriver());
+				.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword());
+		
+		if (sqlSourceHelper.getHibernateDialect() != null)
+			config.setProperty("hibernate.dialect", sqlSourceHelper.getHibernateDialect());
+		if (sqlSourceHelper.getHibernateDriver() != null)
+			config.setProperty("hibernate.connection.driver_class", sqlSourceHelper.getHibernateDriver());
 	}
 
 	/**
