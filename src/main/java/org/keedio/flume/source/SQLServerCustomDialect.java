@@ -38,15 +38,12 @@ public class SQLServerCustomDialect extends SQLServerDialect {
 		registerHibernateType(Types.OTHER, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.REAL, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.REF, StandardBasicTypes.STRING.getName());
-		//registerHibernateType(Types.REF_CURSOR, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.ROWID, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.SMALLINT, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.SQLXML, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.STRUCT, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.TIME, StandardBasicTypes.STRING.getName());
-		registerHibernateType(Types.TIME_WITH_TIMEZONE, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.TIMESTAMP, StandardBasicTypes.STRING.getName());
-		registerHibernateType(Types.TIMESTAMP_WITH_TIMEZONE, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.TINYINT, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.VARBINARY, StandardBasicTypes.STRING.getName());
 		registerHibernateType(Types.VARCHAR, StandardBasicTypes.STRING.getName());
