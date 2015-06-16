@@ -29,7 +29,7 @@ public class SQLQueryBuilder {
 					query = "SELECT " + columns + " FROM " + table + " WHERE " 
 							+ where + " LIMIT " + maxRows + ";";
 					break;
-				case DERBY:
+				case DB2:
 					break;
 				case ORACLE:
 					break;

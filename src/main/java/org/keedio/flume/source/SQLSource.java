@@ -249,7 +249,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
                     isConnected = true;
                     break;
                     
-                case DERBY:
+                case DB2:
                     Class.forName("com.ibm.db2.jcc.DB2Driver");
                     mDBEngine.EstablishConnection();
                     statement = mDBEngine.getConnection().createStatement();                    

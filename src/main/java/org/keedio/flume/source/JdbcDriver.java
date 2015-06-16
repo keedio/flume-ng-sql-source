@@ -10,6 +10,6 @@ public enum JdbcDriver {
     POSTGRESQL,
     SQLITE,
     ORACLE,
-    DERBY,
+    DB2,
     SQLSERVER
 }
