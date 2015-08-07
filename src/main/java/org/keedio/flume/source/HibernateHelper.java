@@ -89,4 +89,17 @@ public class HibernateHelper {
 
 		return rowsList;
 	}
+
+	public void resetConnectionAndSleep() throws InterruptedException {
+		
+		long startTime = System.currentTimeMillis();
+		
+		session.close();
+		establishSession();
+		
+		long execTime = System.currentTimeMillis() - startTime;
+		
+		if (execTime < sqlSourceHelper.getRunQueryDelay())
+			Thread.sleep(sqlSourceHelper.getRunQueryDelay() - execTime);
+	}
 }
