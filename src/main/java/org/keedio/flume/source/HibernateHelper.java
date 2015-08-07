@@ -95,11 +95,11 @@ public class HibernateHelper {
 		long startTime = System.currentTimeMillis();
 		
 		session.close();
-		establishSession();
+		session = factory.openSession();
 		
 		long execTime = System.currentTimeMillis() - startTime;
 		
 		if (execTime < sqlSourceHelper.getRunQueryDelay())
 			Thread.sleep(sqlSourceHelper.getRunQueryDelay() - execTime);
-	}
+	}	
 }
