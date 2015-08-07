@@ -98,7 +98,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 			sqlSourceCounter.endProcess(result.size());
 			
 			if (result.size() < sqlSourceHelper.getMaxRows()){
-				Thread.sleep(sqlSourceHelper.getRunQueryDelay());
+				hibernateHelper.resetConnectionAndSleep();
 			}
 						
 			return Status.READY;
