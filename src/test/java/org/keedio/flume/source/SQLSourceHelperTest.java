@@ -43,38 +43,38 @@ public class SQLSourceHelperTest {
 	@Test(expected = ConfigurationException.class)
 	public void checkStatusFileNameNotSet() {
 		when(context.getString("status.file.name")).thenReturn(null);
-		new SQLSourceHelper(context);
+		new SQLSourceHelper(context,"Source Name");
 	}
 
 	@Test(expected = ConfigurationException.class)
 	public void connectionURLNotSet() {
 		when(context.getString("connection.url")).thenReturn(null);
-		new SQLSourceHelper(context);
+		new SQLSourceHelper(context,"Source Name");
 	}
 
 	@Test(expected = ConfigurationException.class)
 	public void tableNotSet() {
 		when(context.getString("table")).thenReturn(null);
-		new SQLSourceHelper(context);
+		new SQLSourceHelper(context,"Source Name");
 	}
 
 	@Test(expected = ConfigurationException.class)
 	public void userNotSet() {
 		when(context.getString("user")).thenReturn(null);
-		new SQLSourceHelper(context);
+		new SQLSourceHelper(context,"Source Name");
 	}
 
 	@Test(expected = ConfigurationException.class)
 	public void passwordNotSet() {
 		when(context.getString("password")).thenReturn(null);
-		new SQLSourceHelper(context);
+		new SQLSourceHelper(context,"Source Name");
 	}
 
 	/*
 	@Test
 	public void checkNotCreatedDirectory() throws Exception {
 
-		SQLSourceHelper sqlSourceUtils = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceUtils = new SQLSourceHelper(context,"Source Name");
 		SQLSourceHelper sqlSourceUtilsSpy = PowerMockito.spy(sqlSourceUtils);
 
 		PowerMockito.verifyPrivate(sqlSourceUtilsSpy, Mockito.times(1)).invoke("createDirectory");
@@ -83,7 +83,7 @@ public class SQLSourceHelperTest {
 	@Test
 	public void chekGetAllRowsWithNullParam() {
 		
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		assertEquals(new ArrayList<String>(),sqlSourceHelper.getAllRows(null));
 		
 	}
@@ -91,7 +91,7 @@ public class SQLSourceHelperTest {
 	@Test
 	public void chekGetAllRowsWithEmptyParam() {
 		
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		assertEquals(new ArrayList<String>(),sqlSourceHelper.getAllRows(new ArrayList<List<Object>>()));
 	}
 	
@@ -99,7 +99,7 @@ public class SQLSourceHelperTest {
 	@Test
 	public void chekGetAllRows() {
 
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		List<List<Object>> queryResult = new ArrayList<List<Object>>(2);
 		List<String[]> expectedResult = new ArrayList<String[]>(2);
 		String string1 = "string1";
@@ -139,7 +139,7 @@ public class SQLSourceHelperTest {
 	@Test
 	public void checkStatusFileCorrectlyCreated() {
 
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		//sqlSourceHelper.setCurrentIndex(10);
 
 		sqlSourceHelper.updateStatusFile();
@@ -161,19 +161,19 @@ public class SQLSourceHelperTest {
 		when(context.getString("status.file.path", "/var/lib/flume")).thenReturn(file.getParent());
 		when(context.getString("status.file.name")).thenReturn(file.getName());
 
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		sqlSourceHelper.setCurrentIndex(10);
 
 		sqlSourceHelper.updateStatusFile();
 
-		SQLSourceHelper sqlSourceHelper2 = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper2 = new SQLSourceHelper(context,"Source Name");
 		assertEquals(10L, sqlSourceHelper2.getCurrentIndex());
 	}
 	
 	@Test
 	public void getConnectionURL() {
 		
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		assertEquals("jdbc:mysql://host:3306/database", sqlSourceHelper.getConnectionURL());
 	}
 	
@@ -181,7 +181,7 @@ public class SQLSourceHelperTest {
 	@Test
 	public void createDirectory() {
 		
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		File file = new File("/tmp/flume");
 		assertEquals(true, file.exists());
 		assertEquals(true, file.isDirectory());
@@ -192,51 +192,51 @@ public class SQLSourceHelperTest {
 	
 	@Test
 	public void getCurrentIndex() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		assertEquals(0,sqlSourceHelper.getCurrentIndex());
 	}
 	
 	@Test
 	public void setCurrentIndex() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		sqlSourceHelper.setCurrentIndex(10);
 		assertEquals(10,sqlSourceHelper.getCurrentIndex());
 	}
 	
 	@Test
 	public void getUser() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		assertEquals("user",sqlSourceHelper.getUser());
 	}
 	
 	@Test
 	public void getPassword() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		assertEquals("password",sqlSourceHelper.getPassword());
 	}
 	
 	@Test
 	public void getRunQueryDelay() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		assertEquals(10000,sqlSourceHelper.getRunQueryDelay());
 	}
 	
 	@Test
 	public void getBatchSize() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		assertEquals(100,sqlSourceHelper.getBatchSize());
 	}
 	
 	@Test
 	public void getQuery() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		assertEquals("SELECT * FROM table",sqlSourceHelper.getQuery());
 	}
 	
 	@Test
 	public void getCustomQuery() {
 		when(context.getString("custom.query")).thenReturn("SELECT column FROM table");
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context);
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		assertEquals("SELECT column FROM table",sqlSourceHelper.getQuery());
 	}
 	

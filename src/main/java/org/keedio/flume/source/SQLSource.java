@@ -36,7 +36,7 @@ import org.keedio.flume.metrics.SqlSourceCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import au.com.bytecode.opencsv.CSVWriter;
+import com.opencsv.CSVWriter;
 
 
 /**
@@ -57,11 +57,13 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
      */
     @Override
     public void configure(Context context) {
+    	
+    	LOG.getName();
         	
     	LOG.info("Reading and processing configuration values for source " + getName());
 		
     	/* Initialize configuration parameters */
-    	sqlSourceHelper = new SQLSourceHelper(context);
+    	sqlSourceHelper = new SQLSourceHelper(context, this.getName());
         
     	/* Initialize metric counters */
 		sqlSourceCounter = new SqlSourceCounter("SOURCESQL." + this.getName());
@@ -87,8 +89,8 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 			List<List<Object>> result = hibernateHelper.executeQuery();
 						
 			if (!result.isEmpty())
-			{				
-				csvWriter.writeAll(sqlSourceHelper.getAllRows(result));
+			{
+				csvWriter.writeAll(sqlSourceHelper.getAllRows(result),true);
 				csvWriter.flush();
 				sqlSourceCounter.incrementEventCount(result.size());
 				
