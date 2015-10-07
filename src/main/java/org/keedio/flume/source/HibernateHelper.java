@@ -5,7 +5,6 @@ import java.util.List;
 import org.hibernate.ScrollMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.StatelessSession;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.service.ServiceRegistry;
@@ -25,7 +24,8 @@ public class HibernateHelper {
 			.getLogger(HibernateHelper.class);
 
 	private static SessionFactory factory;
-	private StatelessSession session;
+	private Session session;
+	private ServiceRegistry serviceRegistry;
 	private Configuration config;
 	private SQLSourceHelper sqlSourceHelper;
 
@@ -55,10 +55,10 @@ public class HibernateHelper {
 
 		LOG.info("Opening hibernate session");
 
-		ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder()
+		serviceRegistry = new StandardServiceRegistryBuilder()
 				.applySettings(config.getProperties()).build();
 		factory = config.buildSessionFactory(serviceRegistry);
-		session = factory.openStatelessSession();
+		session = factory.openSession();
 	}
 
 	/**
@@ -69,6 +69,7 @@ public class HibernateHelper {
 		LOG.info("Closing hibernate session");
 
 		session.close();
+		factory.close();
 	}
 
 	/**
@@ -80,36 +81,30 @@ public class HibernateHelper {
 	@SuppressWarnings("unchecked")
 	public List<List<Object>> executeQuery() {
 
-		List<List<Object>> rowsList = null;
-		
-		if (sqlSourceHelper.isCustomQuerySet()) {
-			rowsList = session
-					.createSQLQuery(sqlSourceHelper.getQuery())
-					.setReadOnly(true)
-					.setFetchSize(sqlSourceHelper.getMaxRows())
-					.setResultTransformer(Transformers.TO_LIST).list();
-			
-			/*
-			rowsList = session
-					.createSQLQuery(sqlSourceHelper.getQuery())
-					.setReadOnly(true)
-					.setFetchSize(sqlSourceHelper.getMaxRows())
-					.scroll(ScrollMode.FORWARD_ONLY)
-					.setResultTransformer(Transformers.TO_LIST).list();
-			*/
-		}
-		else {
-			rowsList = session
-					.createSQLQuery(sqlSourceHelper.getQuery())
-					.setReadOnly(true)
-					.setFirstResult(sqlSourceHelper.getCurrentIndex())
-					.setMaxResults(sqlSourceHelper.getMaxRows())
-					.setResultTransformer(Transformers.TO_LIST).list();
 
-			sqlSourceHelper.setCurrentIndex(sqlSourceHelper.getCurrentIndex()
-					+ rowsList.size());
-		}
+		List<List<Object>> rowsList = session
+			.createSQLQuery(sqlSourceHelper.getQuery())
+			.setFirstResult(sqlSourceHelper.getCurrentIndex())
+			.setMaxResults(sqlSourceHelper.getMaxRows())
+			.setResultTransformer(Transformers.TO_LIST).list();
+
+		sqlSourceHelper.setCurrentIndex(sqlSourceHelper.getCurrentIndex()
+				+ rowsList.size());
 
 		return rowsList;
+	}
+
+	public void resetConnectionAndSleep() throws InterruptedException {
+		
+		long startTime = System.currentTimeMillis();
+		
+		session.close();
+		factory.close();
+		establishSession();
+		
+		long execTime = System.currentTimeMillis() - startTime;
+		
+		if (execTime < sqlSourceHelper.getRunQueryDelay())
+			Thread.sleep(sqlSourceHelper.getRunQueryDelay() - execTime);
 	}
 }
