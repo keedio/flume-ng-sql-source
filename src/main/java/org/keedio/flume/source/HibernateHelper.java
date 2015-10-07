@@ -2,6 +2,7 @@ package org.keedio.flume.source;
 
 import java.util.List;
 
+import org.hibernate.ScrollMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
@@ -24,6 +25,7 @@ public class HibernateHelper {
 
 	private static SessionFactory factory;
 	private Session session;
+	private ServiceRegistry serviceRegistry;
 	private Configuration config;
 	private SQLSourceHelper sqlSourceHelper;
 
@@ -53,7 +55,7 @@ public class HibernateHelper {
 
 		LOG.info("Opening hibernate session");
 
-		ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder()
+		serviceRegistry = new StandardServiceRegistryBuilder()
 				.applySettings(config.getProperties()).build();
 		factory = config.buildSessionFactory(serviceRegistry);
 		session = factory.openSession();
@@ -67,6 +69,7 @@ public class HibernateHelper {
 		LOG.info("Closing hibernate session");
 
 		session.close();
+		factory.close();
 	}
 
 	/**
@@ -78,15 +81,30 @@ public class HibernateHelper {
 	@SuppressWarnings("unchecked")
 	public List<List<Object>> executeQuery() {
 
+
 		List<List<Object>> rowsList = session
-				.createSQLQuery(sqlSourceHelper.getQuery())
-				.setFirstResult(sqlSourceHelper.getCurrentIndex())
-				.setMaxResults(sqlSourceHelper.getMaxRows())
-				.setResultTransformer(Transformers.TO_LIST).list();				
+			.createSQLQuery(sqlSourceHelper.getQuery())
+			.setFirstResult(sqlSourceHelper.getCurrentIndex())
+			.setMaxResults(sqlSourceHelper.getMaxRows())
+			.setResultTransformer(Transformers.TO_LIST).list();
 
 		sqlSourceHelper.setCurrentIndex(sqlSourceHelper.getCurrentIndex()
 				+ rowsList.size());
 
 		return rowsList;
+	}
+
+	public void resetConnectionAndSleep() throws InterruptedException {
+		
+		long startTime = System.currentTimeMillis();
+		
+		session.close();
+		factory.close();
+		establishSession();
+		
+		long execTime = System.currentTimeMillis() - startTime;
+		
+		if (execTime < sqlSourceHelper.getRunQueryDelay())
+			Thread.sleep(sqlSourceHelper.getRunQueryDelay() - execTime);
 	}
 }
