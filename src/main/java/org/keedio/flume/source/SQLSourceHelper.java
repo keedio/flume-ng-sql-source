@@ -54,6 +54,8 @@ public class SQLSourceHelper {
 	private String statusFilePath, statusFileName, connectionURL, table,
     columnsToSelect, user, password, customQuery, query, hibernateDialect,
     hibernateDriver, agentName, sourceName, statusColumn, startFrom;
+
+	private boolean hibernateAutocommit;
 	
 	private static final String DEFAULT_STATUS_DIRECTORY = "/var/lib/flume";
 	private static final int DEFAULT_QUERY_DELAY = 10000;
@@ -90,6 +92,7 @@ public class SQLSourceHelper {
 		maxRows = context.getInteger("max.rows",DEFAULT_MAX_ROWS);
 		hibernateDialect = context.getString("hibernate.dialect");
 		hibernateDriver = context.getString("hibernate.connection.driver_class");
+		hibernateAutocommit = Boolean.valueOf(context.getString("hibernate.connection.autocommit"));
 		this.sourceName = sourceName;
 		statusColumn = context.getString("status.column");
 		startFrom = context.getString("start.from");
@@ -391,5 +394,8 @@ public class SQLSourceHelper {
 	boolean isCustomQuerySet() {
 		return (customQuery != null);
 	}
-	
+        
+	boolean isHibernateAutocommit()	{
+		return hibernateAutocommit;
+	}
 }

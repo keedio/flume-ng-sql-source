@@ -46,6 +46,8 @@ public class HibernateHelper {
 			config.setProperty("hibernate.dialect", sqlSourceHelper.getHibernateDialect());
 		if (sqlSourceHelper.getHibernateDriver() != null)
 			config.setProperty("hibernate.connection.driver_class", sqlSourceHelper.getHibernateDriver());
+		if (sqlSourceHelper.isHibernateAutocommit())
+			config.setProperty("hibernate.connection.autocommit", "true");
 	}
 
 	/**
