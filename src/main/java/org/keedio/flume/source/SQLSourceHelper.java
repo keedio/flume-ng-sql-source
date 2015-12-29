@@ -28,9 +28,6 @@ import org.slf4j.LoggerFactory;
  * 
  * Configuration parameters readed from flume configuration file:
  * <tt>type: </tt> org.keedio.flume.source.SQLSource <p>
- * <tt>connection.url: </tt> database connection URL <p>
- * <tt>user: </tt> user to connect to database <p>
- * <tt>password: </tt> user password <p>
  * <tt>table: </tt> table to read from <p>
  * <tt>columns.to.select: </tt> columns to select for import data (* will import all) <p>
  * <tt>incremental.value: </tt> Start value to import data <p>
@@ -50,26 +47,30 @@ public class SQLSourceHelper {
 	private static final Logger LOG = LoggerFactory.getLogger(SQLSourceHelper.class);
 	
 	private File file,directory;
-	private int runQueryDelay, batchSize, maxRows, currentIndex;
+	private int runQueryDelay, batchSize, maxRows;
+	private String startFrom, currentIndex;
 	private String statusFilePath, statusFileName, connectionURL, table,
-    columnsToSelect, user, password, customQuery, query, hibernateDialect,
-    hibernateDriver, agentName, sourceName, statusColumn, startFrom;
+    columnsToSelect, customQuery, query, sourceName, incrementalColumn;
 
-	private boolean hibernateAutocommit;
+	private Context context;
+	
+	private Map<String,String> statusFileJsonMap = new LinkedHashMap<String,String>();
 	
 	private static final String DEFAULT_STATUS_DIRECTORY = "/var/lib/flume";
 	private static final int DEFAULT_QUERY_DELAY = 10000;
 	private static final int DEFAULT_BATCH_SIZE = 100;
 	private static final int DEFAULT_MAX_ROWS = 10000;
-	private static final int DEFAULT_INCREMENTAL_VALUE = 0;
+	private static final String DEFAULT_INCREMENTAL_VALUE = "0";
 	
 	private static final String SOURCE_NAME_STATUS_FILE = "SourceName";
 	private static final String URL_STATUS_FILE = "URL";
 	private static final String COLUMNS_TO_SELECT_STATUS_FILE = "ColumnsToSelect";
 	private static final String TABLE_STATUS_FILE = "Table";
 	private static final String LAST_INDEX_STATUS_FILE = "LastIndex";
-	private static final String STATUS_COLUMN_NAME_STATUS_FILE = "StatusColumn";
+	private static final String INCREMENTAL_COLUMN_NAME_STATUS_FILE = "IncrementalColumn";
 	private static final String QUERY_STATUS_FILE = "Query";
+	
+
 
 	/**
 	 * Builds an SQLSourceHelper containing the configuration parameters and
@@ -78,24 +79,24 @@ public class SQLSourceHelper {
 	 */
 	public SQLSourceHelper(Context context, String sourceName){
 		
+		this.context = context;
+		
 		statusFilePath = context.getString("status.file.path", DEFAULT_STATUS_DIRECTORY);
 		statusFileName = context.getString("status.file.name");
-		connectionURL = context.getString("connection.url");
 		table = context.getString("table");
 		columnsToSelect = context.getString("columns.to.select","*");
 		runQueryDelay = context.getInteger("run.query.delay",DEFAULT_QUERY_DELAY);
-		user = context.getString("user");
-		password = context.getString("password");
 		directory = new File(statusFilePath);
 		customQuery = context.getString("custom.query");
 		batchSize = context.getInteger("batch.size",DEFAULT_BATCH_SIZE);
 		maxRows = context.getInteger("max.rows",DEFAULT_MAX_ROWS);
-		hibernateDialect = context.getString("hibernate.dialect");
-		hibernateDriver = context.getString("hibernate.connection.driver_class");
-		hibernateAutocommit = Boolean.valueOf(context.getString("hibernate.connection.autocommit"));
+		connectionURL = context.getString("hibernate.connection.url");
+		
 		this.sourceName = sourceName;
-		statusColumn = context.getString("status.column");
-		startFrom = context.getString("start.from");
+		incrementalColumn = context.getString("incremental.column");
+		startFrom = context.getString("start.from",DEFAULT_INCREMENTAL_VALUE);
+		statusFileJsonMap = new LinkedHashMap<String, String>();
+		
 		
 		checkMandatoryProperties();
                 
@@ -105,20 +106,25 @@ public class SQLSourceHelper {
 		
 		file = new File(statusFilePath + "/" + statusFileName);
 		
-		currentIndex = getStatusFileIndex(context.getInteger(startFrom, DEFAULT_INCREMENTAL_VALUE));
-		
+		if (!isStatusFileCreated()){
+			currentIndex = startFrom;
+			createStatusFile();
+		}
+		else
+			currentIndex = getStatusFileIndex(startFrom);
+
 		query = buildQuery();
 	}
 	
 	
-	private String buildQuery() {
+	public String buildQuery() {
 		
 		if (customQuery == null){
 			return "SELECT " + columnsToSelect + " FROM " + table;
 		}
 		else {
 			if (customQuery.contains("$@$")){
-				return customQuery.replace("$@$", Integer.toString(currentIndex));
+				return customQuery.replace("$@$", currentIndex);
 			}
 			else{
 				return customQuery;
@@ -169,27 +175,26 @@ public class SQLSourceHelper {
 	/**
 	 * Create status file
 	 */
-	public void createStatusFile(){
-		Map<String,String> jsonMap = new LinkedHashMap<String,String>();
+	public void createStatusFile(){		
 		
 		if (customQuery == null){
-			jsonMap.put(SOURCE_NAME_STATUS_FILE, agentName);
-			jsonMap.put(URL_STATUS_FILE, connectionURL);
-			jsonMap.put(COLUMNS_TO_SELECT_STATUS_FILE, columnsToSelect);
-			jsonMap.put(TABLE_STATUS_FILE, table);
-			jsonMap.put(LAST_INDEX_STATUS_FILE, Integer.toString(currentIndex));
+			statusFileJsonMap.put(SOURCE_NAME_STATUS_FILE, sourceName);
+			statusFileJsonMap.put(URL_STATUS_FILE, connectionURL);
+			statusFileJsonMap.put(COLUMNS_TO_SELECT_STATUS_FILE, columnsToSelect);
+			statusFileJsonMap.put(TABLE_STATUS_FILE, table);
+			statusFileJsonMap.put(LAST_INDEX_STATUS_FILE, currentIndex);
 		}
 		else
 		{
-			jsonMap.put(SOURCE_NAME_STATUS_FILE, agentName);
-			jsonMap.put(URL_STATUS_FILE, connectionURL);
-			jsonMap.put(QUERY_STATUS_FILE, customQuery);
-			jsonMap.put(STATUS_COLUMN_NAME_STATUS_FILE, table);
-			jsonMap.put(LAST_INDEX_STATUS_FILE, Integer.toString(currentIndex));
+			statusFileJsonMap.put(SOURCE_NAME_STATUS_FILE, sourceName);
+			statusFileJsonMap.put(URL_STATUS_FILE, connectionURL);
+			statusFileJsonMap.put(QUERY_STATUS_FILE, customQuery);
+			statusFileJsonMap.put(INCREMENTAL_COLUMN_NAME_STATUS_FILE, incrementalColumn);
+			statusFileJsonMap.put(LAST_INDEX_STATUS_FILE, currentIndex);
 		}
 		try {
 			Writer fileWriter = new FileWriter(file,false);
-			JSONValue.writeJSONString(jsonMap, fileWriter);
+			JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
 			fileWriter.close();
 		} catch (IOException e) {
 			LOG.error("Error creating value to status file!!!",e);
@@ -201,24 +206,21 @@ public class SQLSourceHelper {
      */
 	public void updateStatusFile() {
 		
-		Map<String,String> jsonMap = new LinkedHashMap<String,String>();
-		
-		if (customQuery == null){
-			jsonMap.put(LAST_INDEX_STATUS_FILE, Integer.toString(currentIndex));
-		}
+		statusFileJsonMap.put(LAST_INDEX_STATUS_FILE, currentIndex);
+
 		try {
 			Writer fileWriter = new FileWriter(file,false);
-			JSONValue.writeJSONString(jsonMap, fileWriter);
+			JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
 			fileWriter.close();
 		} catch (IOException e) {
 			LOG.error("Error writing incremental value to status file!!!",e);
 		}	
 	}
 	
-	private int getStatusFileIndex(int configuredStartValue) {
+	private String getStatusFileIndex(String configuredStartValue) {
 		
 		if (!isStatusFileCreated()) {
-			LOG.info("Status file not created, using start value from config file");
+			LOG.info("Status file not created, using start value from config file and creating file");
 			return configuredStartValue;
 		}
 		else{
@@ -226,9 +228,9 @@ public class SQLSourceHelper {
 				FileReader fileReader = new FileReader(file);
 				
 				JSONParser jsonParser = new JSONParser();
-				Map<String,String> jsonMap = (Map)jsonParser.parse(fileReader);
-				checkJsonValues(jsonMap);
-				return Integer.parseInt(jsonMap.get(LAST_INDEX_STATUS_FILE));
+				statusFileJsonMap = (Map)jsonParser.parse(fileReader);
+				checkJsonValues();
+				return statusFileJsonMap.get(LAST_INDEX_STATUS_FILE);
 				
 			} catch (Exception e) {
 				LOG.error("Exception reading status file, doing back up and creating new status file", e);
@@ -238,22 +240,18 @@ public class SQLSourceHelper {
 		}
 	}
 	
-	private void checkJsonValues(Map<String,String> jsonMap) throws ParseException {
+	private void checkJsonValues() throws ParseException {
 		
 		// Check commons values to default and custom query
-		if (!jsonMap.containsKey(SOURCE_NAME_STATUS_FILE) || !jsonMap.containsKey(URL_STATUS_FILE) ||
-			!jsonMap.containsKey(LAST_INDEX_STATUS_FILE)) {
+		if (!statusFileJsonMap.containsKey(SOURCE_NAME_STATUS_FILE) || !statusFileJsonMap.containsKey(URL_STATUS_FILE) ||
+			!statusFileJsonMap.containsKey(LAST_INDEX_STATUS_FILE)) {
 			LOG.error("Status file doesn't contains all required values");	
 			throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
 		}
-		if (jsonMap.get(URL_STATUS_FILE) != connectionURL){
+		if (!statusFileJsonMap.get(URL_STATUS_FILE).equals(connectionURL)){
 			LOG.error("Connection url in status file doesn't match with configured in properties file");
 			throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
-		}else if (jsonMap.get(SOURCE_NAME_STATUS_FILE) != sourceName){
-			LOG.error("Source name in status file doesn't match with configured in properties file");
-			throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
-		}
-		else if (jsonMap.get(LAST_INDEX_STATUS_FILE) != sourceName){
+		}else if (!statusFileJsonMap.get(SOURCE_NAME_STATUS_FILE).equals(sourceName)){
 			LOG.error("Source name in status file doesn't match with configured in properties file");
 			throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
 		}
@@ -261,15 +259,15 @@ public class SQLSourceHelper {
 		// Check default query values
 		if (customQuery == null)
 		{
-			if (!jsonMap.containsKey(COLUMNS_TO_SELECT_STATUS_FILE) || !jsonMap.containsKey(TABLE_STATUS_FILE)){
+			if (!statusFileJsonMap.containsKey(COLUMNS_TO_SELECT_STATUS_FILE) || !statusFileJsonMap.containsKey(TABLE_STATUS_FILE)){
 				LOG.error("Expected ColumsToSelect and Table fields in status file");	
 				throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
 			}
-			if (jsonMap.get(COLUMNS_TO_SELECT_STATUS_FILE) != columnsToSelect){
+			if (!statusFileJsonMap.get(COLUMNS_TO_SELECT_STATUS_FILE).equals(columnsToSelect)){
 				LOG.error("ColumsToSelect value in status file doesn't match with configured in properties file");
 				throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
 			}
-			if (jsonMap.get(TABLE_STATUS_FILE) != table){
+			if (!statusFileJsonMap.get(TABLE_STATUS_FILE).equals(table)){
 				LOG.error("Table value in status file doesn't match with configured in properties file");
 				throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
 			}
@@ -278,16 +276,16 @@ public class SQLSourceHelper {
 		
 		// Check custom query values
 		if (customQuery != null){
-			if (!jsonMap.containsKey(QUERY_STATUS_FILE) || !jsonMap.containsKey(STATUS_COLUMN_NAME_STATUS_FILE)){
-				LOG.error("Expected Query and StatusColumn fields in status file");	
+			if (!statusFileJsonMap.containsKey(QUERY_STATUS_FILE) || !statusFileJsonMap.containsKey(INCREMENTAL_COLUMN_NAME_STATUS_FILE)){
+				LOG.error("Expected Query and IncrementalColumn fields in status file");	
 				throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
 			}
-			if (jsonMap.get(QUERY_STATUS_FILE) != query){
+			if (!statusFileJsonMap.get(QUERY_STATUS_FILE).equals(customQuery)){
 				LOG.error("Query value in status file doesn't match with configured in properties file");
 				throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
 			}
-			if (jsonMap.get(STATUS_COLUMN_NAME_STATUS_FILE) != statusColumn){
-				LOG.error("StatuColumn value in status file doesn't match with configured in properties file");
+			if (!statusFileJsonMap.get(INCREMENTAL_COLUMN_NAME_STATUS_FILE).equals(incrementalColumn)){
+				LOG.error("IncrementalColumn value in status file doesn't match with configured in properties file");
 				throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
 			}
 			return;
@@ -300,31 +298,18 @@ public class SQLSourceHelper {
 	
 	private void checkMandatoryProperties() {
 		
+		if (connectionURL == null){
+			throw new ConfigurationException("hibernate.connection.url property not set");
+		}
 		if (statusFileName == null){
 			throw new ConfigurationException("status.file.name property not set");
-		}
-		if (connectionURL == null){
-			throw new ConfigurationException("connection.url property not set");
 		}
 		if (table == null && customQuery == null){
 			throw new ConfigurationException("property table not set");
 		}
-		if (customQuery != null && statusColumn ==null){
-			throw new ConfigurationException("status.column.name property not set");
+		if (customQuery != null && incrementalColumn ==null){
+			throw new ConfigurationException("incremental.column property not set. If custom query is used, the incremental column name is mandatory");
 		}
-		if (password == null){
-			throw new ConfigurationException("password property not set");
-		}
-		if (user == null){
-			throw new ConfigurationException("user property not set");
-		}
-	}
-
-	/*
-	 * @return String connectionURL
-	 */
-	String getConnectionURL() {            
-		return connectionURL;
 	}
 
 	/*
@@ -337,29 +322,15 @@ public class SQLSourceHelper {
 	/*
 	 * @return long incremental value as parameter from this
 	 */
-	int getCurrentIndex() {
+	String getCurrentIndex() {
 		return currentIndex;
 	}
 
 	/*
 	 * @void set incrementValue
 	 */
-	void setCurrentIndex(int newValue) {
+	void setCurrentIndex(String newValue) {
 		currentIndex = newValue;
-	}
-
-	/*
-	 * @return String user for database
-	 */
-	String getUser() {
-		return user;
-	}
-
-	/*
-	 * @return String password for user
-	 */
-	String getPassword() {
-		return password;
 	}
 
 	/*
@@ -380,22 +351,16 @@ public class SQLSourceHelper {
 	String getQuery() {
 		return query;
 	}
-
-
-	String getHibernateDialect() {
-		return hibernateDialect;
-	}
-
-
-	String getHibernateDriver() {
-		return hibernateDriver;
+	
+	String getConnectionURL() {
+		return connectionURL;
 	}
 	
 	boolean isCustomQuerySet() {
 		return (customQuery != null);
 	}
-        
-	boolean isHibernateAutocommit()	{
-		return hibernateAutocommit;
+	
+	Context getContext() {
+		return context;
 	}
 }

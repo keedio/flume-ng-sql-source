@@ -1,8 +1,9 @@
 package org.keedio.flume.source;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
-import org.hibernate.ScrollMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
@@ -11,6 +12,7 @@ import org.hibernate.service.ServiceRegistry;
 import org.hibernate.transform.Transformers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.flume.Context;
 
 /**
  * Helper class to manage hibernate sessions and perform queries
@@ -36,18 +38,18 @@ public class HibernateHelper {
 	public HibernateHelper(SQLSourceHelper sqlSourceHelper) {
 
 		this.sqlSourceHelper = sqlSourceHelper;
-
-		config = new Configuration()
-				.setProperty("hibernate.connection.url", sqlSourceHelper.getConnectionURL())
-				.setProperty("hibernate.connection.username", sqlSourceHelper.getUser())
-				.setProperty("hibernate.connection.password", sqlSourceHelper.getPassword());
+		Context context = sqlSourceHelper.getContext();
 		
-		if (sqlSourceHelper.getHibernateDialect() != null)
-			config.setProperty("hibernate.dialect", sqlSourceHelper.getHibernateDialect());
-		if (sqlSourceHelper.getHibernateDriver() != null)
-			config.setProperty("hibernate.connection.driver_class", sqlSourceHelper.getHibernateDriver());
-		if (sqlSourceHelper.isHibernateAutocommit())
-			config.setProperty("hibernate.connection.autocommit", "true");
+		Map<String,String> hibernateProperties = context.getSubProperties("hibernate.");
+		Iterator<Map.Entry<String,String>> it = hibernateProperties.entrySet().iterator();
+		
+		config = new Configuration();
+		Map.Entry<String, String> e;
+		
+		while (it.hasNext()){
+			e = it.next();
+			config.setProperty("hibernate." + e.getKey(), e.getValue());
+		}
 	}
 
 	/**
@@ -82,16 +84,42 @@ public class HibernateHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	public List<List<Object>> executeQuery() {
-
-
-		List<List<Object>> rowsList = session
-			.createSQLQuery(sqlSourceHelper.getQuery())
-			.setFirstResult(sqlSourceHelper.getCurrentIndex())
-			.setMaxResults(sqlSourceHelper.getMaxRows())
-			.setResultTransformer(Transformers.TO_LIST).list();
-
-		sqlSourceHelper.setCurrentIndex(sqlSourceHelper.getCurrentIndex()
-				+ rowsList.size());
+		
+		List<List<Object>> rowsList ;
+		
+		if (sqlSourceHelper.isCustomQuerySet()){
+			if (sqlSourceHelper.getMaxRows() == 0){
+				rowsList = session
+						.createSQLQuery(sqlSourceHelper.buildQuery())
+						.setResultTransformer(Transformers.TO_LIST).list();
+			}else{
+				rowsList = session
+					.createSQLQuery(sqlSourceHelper.buildQuery())
+					.setMaxResults(sqlSourceHelper.getMaxRows())
+					.setResultTransformer(Transformers.TO_LIST).list();
+			}
+			if (!rowsList.isEmpty())
+				sqlSourceHelper.setCurrentIndex(rowsList.get(rowsList.size()-1).get(0).toString());
+		}
+		else
+		{
+			if (sqlSourceHelper.getMaxRows() == 0){
+				rowsList = session
+						.createSQLQuery(sqlSourceHelper.getQuery())
+						.setFirstResult(Integer.parseInt(sqlSourceHelper.getCurrentIndex()))
+						.setResultTransformer(Transformers.TO_LIST).list();
+			}else{
+				rowsList = session
+					.createSQLQuery(sqlSourceHelper.getQuery())
+					.setFirstResult(Integer.parseInt(sqlSourceHelper.getCurrentIndex()))
+					.setMaxResults(sqlSourceHelper.getMaxRows())
+					.setResultTransformer(Transformers.TO_LIST).list();
+			}
+			sqlSourceHelper.setCurrentIndex(sqlSourceHelper.getCurrentIndex()
+					+ rowsList.size());
+		}
+		
+		
 
 		return rowsList;
 	}

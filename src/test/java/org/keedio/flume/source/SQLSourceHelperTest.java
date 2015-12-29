@@ -27,47 +27,15 @@ public class SQLSourceHelperTest {
 	public void setup() {
 
 		when(context.getString("status.file.name")).thenReturn("statusFileName.txt");
-		when(context.getString("connection.url")).thenReturn("jdbc:mysql://host:3306/database");
+		when(context.getString("hibernate.connection.url")).thenReturn("jdbc:mysql://host:3306/database");
 		when(context.getString("table")).thenReturn("table");
 		when(context.getString("incremental.column.name")).thenReturn("incrementalColumName");
-		when(context.getString("user")).thenReturn("user");
-		when(context.getString("password")).thenReturn("password");
 		when(context.getString("status.file.path", "/var/lib/flume")).thenReturn("/tmp/flume");
 		when(context.getString("columns.to.select", "*")).thenReturn("*");
 		when(context.getInteger("run.query.delay", 10000)).thenReturn(10000);
 		when(context.getInteger("batch.size", 100)).thenReturn(100);
 		when(context.getInteger("max.rows", 10000)).thenReturn(10000);
 		when(context.getLong("incremental.value", 0L)).thenReturn(0L);
-	}
-
-	@Test(expected = ConfigurationException.class)
-	public void checkStatusFileNameNotSet() {
-		when(context.getString("status.file.name")).thenReturn(null);
-		new SQLSourceHelper(context,"Source Name");
-	}
-
-	@Test(expected = ConfigurationException.class)
-	public void connectionURLNotSet() {
-		when(context.getString("connection.url")).thenReturn(null);
-		new SQLSourceHelper(context,"Source Name");
-	}
-
-	@Test(expected = ConfigurationException.class)
-	public void tableNotSet() {
-		when(context.getString("table")).thenReturn(null);
-		new SQLSourceHelper(context,"Source Name");
-	}
-
-	@Test(expected = ConfigurationException.class)
-	public void userNotSet() {
-		when(context.getString("user")).thenReturn(null);
-		new SQLSourceHelper(context,"Source Name");
-	}
-
-	@Test(expected = ConfigurationException.class)
-	public void passwordNotSet() {
-		when(context.getString("password")).thenReturn(null);
-		new SQLSourceHelper(context,"Source Name");
 	}
 
 	/*
@@ -81,11 +49,72 @@ public class SQLSourceHelperTest {
 	}*/
 	
 	@Test
+	public void getConnectionURL() {
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
+		assertEquals("jdbc:mysql://host:3306/database", sqlSourceHelper.getConnectionURL());
+	}
+	
+	@Test
+	public void getCurrentIndex() {
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
+		assertEquals(0,sqlSourceHelper.getCurrentIndex());
+	}
+	
+	@Test
+	public void setCurrentIndex() {
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
+		sqlSourceHelper.setCurrentIndex("10");
+		assertEquals(10,sqlSourceHelper.getCurrentIndex());
+	}
+	
+	@Test
+	public void getRunQueryDelay() {
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
+		assertEquals(10000,sqlSourceHelper.getRunQueryDelay());
+	}
+	
+	@Test
+	public void getBatchSize() {
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
+		assertEquals(100,sqlSourceHelper.getBatchSize());
+	}
+	
+	@Test
+	public void getQuery() {
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
+		assertEquals("SELECT * FROM table",sqlSourceHelper.getQuery());
+	}
+	
+	@Test
+	public void getCustomQuery() {
+		when(context.getString("custom.query")).thenReturn("SELECT column FROM table");
+		when(context.getString("incremental.column")).thenReturn("incremental");
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
+		assertEquals("SELECT column FROM table",sqlSourceHelper.getQuery());
+	}
+	
+	@Test
 	public void chekGetAllRowsWithNullParam() {
-		
 		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		assertEquals(new ArrayList<String>(),sqlSourceHelper.getAllRows(null));
-		
+	}
+
+	@Test(expected = ConfigurationException.class)
+	public void checkStatusFileNameNotSet() {
+		when(context.getString("status.file.name")).thenReturn(null);
+		new SQLSourceHelper(context,"Source Name");
+	}
+
+	@Test(expected = ConfigurationException.class)
+	public void connectionURLNotSet() {
+		when(context.getString("hibernate.connection.url")).thenReturn(null);
+		new SQLSourceHelper(context,"Source Name");
+	}
+
+	@Test(expected = ConfigurationException.class)
+	public void tableNotSet() {
+		when(context.getString("table")).thenReturn(null);
+		new SQLSourceHelper(context,"Source Name");
 	}
 	
 	@Test
@@ -135,7 +164,19 @@ public class SQLSourceHelperTest {
 		assertArrayEquals(expectedResult.get(1),sqlSourceHelper.getAllRows(queryResult).get(1));
 	}
 
-
+	@SuppressWarnings("unused")
+	@Test
+	public void createDirectory() {
+		
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
+		File file = new File("/tmp/flume");
+		assertEquals(true, file.exists());
+		assertEquals(true, file.isDirectory());
+		if (file.exists()){
+			file.delete();
+		}
+	}
+		
 	@Test
 	public void checkStatusFileCorrectlyCreated() {
 
@@ -150,19 +191,21 @@ public class SQLSourceHelperTest {
 			file.delete();
 			file.getParentFile().delete();
 		}
-
 	}
 
 	@Test
 	public void checkStatusFileCorrectlyUpdated() throws Exception {
 
-		File file = File.createTempFile("statusFileName", ".txt");
+		//File file = File.createTempFile("statusFileName", ".txt");
 
-		when(context.getString("status.file.path", "/var/lib/flume")).thenReturn(file.getParent());
-		when(context.getString("status.file.name")).thenReturn(file.getName());
+		when(context.getString("status.file.path")).thenReturn("/var/lib/flume");
+		when(context.getString("hibernate.connection.url")).thenReturn("jdbc:mysql://host:3306/database");
+		when(context.getString("table")).thenReturn("table");
+		when(context.getString("status.file.name")).thenReturn("statusFileName");
 
 		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
-		sqlSourceHelper.setCurrentIndex(10);
+		sqlSourceHelper.createStatusFile();
+		sqlSourceHelper.setCurrentIndex("10");
 
 		sqlSourceHelper.updateStatusFile();
 
@@ -170,75 +213,7 @@ public class SQLSourceHelperTest {
 		assertEquals(10L, sqlSourceHelper2.getCurrentIndex());
 	}
 	
-	@Test
-	public void getConnectionURL() {
-		
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
-		assertEquals("jdbc:mysql://host:3306/database", sqlSourceHelper.getConnectionURL());
-	}
-	
-	@SuppressWarnings("unused")
-	@Test
-	public void createDirectory() {
-		
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
-		File file = new File("/tmp/flume");
-		assertEquals(true, file.exists());
-		assertEquals(true, file.isDirectory());
-		if (file.exists()){
-			file.delete();
-		}
-	}
-	
-	@Test
-	public void getCurrentIndex() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
-		assertEquals(0,sqlSourceHelper.getCurrentIndex());
-	}
-	
-	@Test
-	public void setCurrentIndex() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
-		sqlSourceHelper.setCurrentIndex(10);
-		assertEquals(10,sqlSourceHelper.getCurrentIndex());
-	}
-	
-	@Test
-	public void getUser() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
-		assertEquals("user",sqlSourceHelper.getUser());
-	}
-	
-	@Test
-	public void getPassword() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
-		assertEquals("password",sqlSourceHelper.getPassword());
-	}
-	
-	@Test
-	public void getRunQueryDelay() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
-		assertEquals(10000,sqlSourceHelper.getRunQueryDelay());
-	}
-	
-	@Test
-	public void getBatchSize() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
-		assertEquals(100,sqlSourceHelper.getBatchSize());
-	}
-	
-	@Test
-	public void getQuery() {
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
-		assertEquals("SELECT * FROM table",sqlSourceHelper.getQuery());
-	}
-	
-	@Test
-	public void getCustomQuery() {
-		when(context.getString("custom.query")).thenReturn("SELECT column FROM table");
-		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
-		assertEquals("SELECT column FROM table",sqlSourceHelper.getQuery());
-	}
+
 	
 	@After
 	public void deleteDirectory(){
@@ -247,4 +222,5 @@ public class SQLSourceHelperTest {
 			file.delete();
 		}
 	}
+
 }
