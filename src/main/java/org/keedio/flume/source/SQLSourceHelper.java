@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
  * <tt>type: </tt> org.keedio.flume.source.SQLSource <p>
  * <tt>table: </tt> table to read from <p>
  * <tt>columns.to.select: </tt> columns to select for import data (* will import all) <p>
- * <tt>incremental.value: </tt> Start value to import data <p>
  * <tt>run.query.delay: </tt> delay time to execute each query to database <p>
  * <tt>status.file.path: </tt> Directory to save status file <p>
  * <tt>status.file.name: </tt> Name for status file (saves last row index processed) <p>
