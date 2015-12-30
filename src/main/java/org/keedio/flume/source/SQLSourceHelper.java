@@ -50,7 +50,7 @@ public class SQLSourceHelper {
 	private int runQueryDelay, batchSize, maxRows;
 	private String startFrom, currentIndex;
 	private String statusFilePath, statusFileName, connectionURL, table,
-    columnsToSelect, customQuery, query, sourceName, incrementalColumn;
+    columnsToSelect, customQuery, query, sourceName;
 
 	private Context context;
 	
@@ -93,7 +93,6 @@ public class SQLSourceHelper {
 		connectionURL = context.getString("hibernate.connection.url");
 		
 		this.sourceName = sourceName;
-		incrementalColumn = context.getString("incremental.column");
 		startFrom = context.getString("start.from",DEFAULT_INCREMENTAL_VALUE);
 		statusFileJsonMap = new LinkedHashMap<String, String>();
 		
@@ -177,21 +176,12 @@ public class SQLSourceHelper {
 	 */
 	public void createStatusFile(){		
 		
-		if (customQuery == null){
-			statusFileJsonMap.put(SOURCE_NAME_STATUS_FILE, sourceName);
-			statusFileJsonMap.put(URL_STATUS_FILE, connectionURL);
-			statusFileJsonMap.put(COLUMNS_TO_SELECT_STATUS_FILE, columnsToSelect);
-			statusFileJsonMap.put(TABLE_STATUS_FILE, table);
-			statusFileJsonMap.put(LAST_INDEX_STATUS_FILE, currentIndex);
-		}
-		else
-		{
-			statusFileJsonMap.put(SOURCE_NAME_STATUS_FILE, sourceName);
-			statusFileJsonMap.put(URL_STATUS_FILE, connectionURL);
-			statusFileJsonMap.put(QUERY_STATUS_FILE, customQuery);
-			statusFileJsonMap.put(INCREMENTAL_COLUMN_NAME_STATUS_FILE, incrementalColumn);
-			statusFileJsonMap.put(LAST_INDEX_STATUS_FILE, currentIndex);
-		}
+		statusFileJsonMap.put(SOURCE_NAME_STATUS_FILE, sourceName);
+		statusFileJsonMap.put(URL_STATUS_FILE, connectionURL);
+		statusFileJsonMap.put(COLUMNS_TO_SELECT_STATUS_FILE, columnsToSelect);
+		statusFileJsonMap.put(TABLE_STATUS_FILE, table);
+		statusFileJsonMap.put(LAST_INDEX_STATUS_FILE, currentIndex);
+			
 		try {
 			Writer fileWriter = new FileWriter(file,false);
 			JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
@@ -284,10 +274,6 @@ public class SQLSourceHelper {
 				LOG.error("Query value in status file doesn't match with configured in properties file");
 				throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
 			}
-			if (!statusFileJsonMap.get(INCREMENTAL_COLUMN_NAME_STATUS_FILE).equals(incrementalColumn)){
-				LOG.error("IncrementalColumn value in status file doesn't match with configured in properties file");
-				throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
-			}
 			return;
 		}
 	}
@@ -306,9 +292,6 @@ public class SQLSourceHelper {
 		}
 		if (table == null && customQuery == null){
 			throw new ConfigurationException("property table not set");
-		}
-		if (customQuery != null && incrementalColumn ==null){
-			throw new ConfigurationException("incremental.column property not set. If custom query is used, the incremental column name is mandatory");
 		}
 	}
 

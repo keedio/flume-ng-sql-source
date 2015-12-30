@@ -8,6 +8,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.loader.custom.CustomQuery;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.transform.Transformers;
 import org.slf4j.Logger;
@@ -115,8 +116,8 @@ public class HibernateHelper {
 					.setMaxResults(sqlSourceHelper.getMaxRows())
 					.setResultTransformer(Transformers.TO_LIST).list();
 			}
-			sqlSourceHelper.setCurrentIndex(sqlSourceHelper.getCurrentIndex()
-					+ rowsList.size());
+			sqlSourceHelper.setCurrentIndex(Integer.toString((Integer.parseInt(sqlSourceHelper.getCurrentIndex())
+					+ rowsList.size())));
 		}
 		
 		
@@ -128,9 +129,12 @@ public class HibernateHelper {
 		
 		long startTime = System.currentTimeMillis();
 		
-		session.close();
-		factory.close();
-		establishSession();
+		if (!sqlSourceHelper.isCustomQuerySet()){
+			session.close();
+			factory.close();
+			Thread.sleep(sqlSourceHelper.getRunQueryDelay()/2);
+			establishSession();
+		}
 		
 		long execTime = System.currentTimeMillis() - startTime;
 		
