@@ -16,7 +16,7 @@ Compilation and packaging
 Deployment
 ----------
 
-Copy flume-ng-sql-source-0.8.jar in target folder into flume plugins dir folder
+Copy flume-ng-sql-source-<version>.jar in target folder into flume plugins dir folder
 ```
   $ mkdir -p $FLUME_HOME/plugins.d/sql-source/lib $FLUME_HOME/plugins.d/sql-source/libext
   $ cp flume-ng-sql-source-0.8.jar $FLUME_HOME/plugins.d/sql-source/lib
@@ -40,6 +40,10 @@ $ tar xzf sqljdbc_4.1.5605.100_enu.tar.gz
 $ cp sqljdbc_4.1/enu/sqljdbc41.jar $FLUME_HOME/plugins.d/lib/sql-source/libext
 ```
 
+##### IBM DB2
+Download the official IBM DB2 jdbc driver and copy in libext flume plugins directory:
+Download URL: http://www-01.ibm.com/support/docview.wss?uid=swg21363866
+
 Configuration of SQL Source:
 ----------
 Mandatory properties in <b>bold</b>
@@ -48,13 +52,13 @@ Mandatory properties in <b>bold</b>
 | ----------------------- | :-----: | :---------- |
 | <b>channels</b> | - | Connected channel names |
 | <b>type</b> | - | The component type name, needs to be org.keedio.flume.source.SQLSource  |
-| <b>connection.url</b> | - | Url to connect with the remote Database |
-| <b>user</b> | - | Username to connect with the database |
-| <b>password</b> | - | Password to connect with the database |
+| <b>hibernate.connection.url</b> | - | Url to connect with the remote Database |
+| <b>hibernate.connection.user</b> | - | Username to connect with the database |
+| <b>hibernate.connection.password</b> | - | Password to connect with the database |
 | <b>table</b> | - | Table to export data |
 | <b>status.file.name</b> | - | Local file name to save last row number readed |
 | status.file.path | /var/lib/flume | Path to save the status file |
-| incremental.value | 0 | Start value to import data |
+| start.from | 0 | Start value to import data |
 | columns.to.select | * | Wich colums of the table will be selected |
 | run.query.delay | 10000 | ms to wait between run queries |
 | batch.size| 100 | Batch size to send events to flume channel |
@@ -62,53 +66,66 @@ Mandatory properties in <b>bold</b>
 | custom.query | - | Custom query to force a special request to the DB, be carefull. Check below explanation of this property. |
 | hibernate.connection.driver_class | -| Driver class to use by hibernate, if not specified the framework will auto asign one |
 | hibernate.dialect | - | Dialect to use by hibernate, if not specified the framework will auto asign one |
+| hibernate.connection.provider_class | - | Set to org.hibernate.connection.C3P0ConnectionProvider to use C3P0 connection pool (recommended for production) |
+| hibernate.c3p0.min_size | - | Min connection pool size |
+| hibernate.c3p0.max_size | - | Max connection pool size |
+
+Standard Query
+-------------
+If no custom query is set, ```SELECT <columns.to.select> FROM <table>``` will be executed each ```run.query.delay``` milliseconds configured
 
 Custom Query
 -------------
-A custom query is supported to bring the possibility of use entire SQL languaje. This is powerfull, but risky, be carefull with the custom queries used.
+A custom query is supported to bring the possibility of use entire SQL languaje. This is powerfull, but risky, be carefull with the custom queries used.  
+
+To avoid rows export repetitions use $@$ special character in WHERE clause, to incrementaly export not processed rows and the new ones inserted.
 
 Example:
 ```
-agent.sources.sql-source.custom.query = SELECT field1,field2 FROM table1 WHERE field1='test'
+agent.sources.sql-source.custom.query = SELECT incrementalField,field2 FROM table1 WHERE incrementalField > $@$ 
 ```
 
 Configuration example
 --------------------
 
 ```properties
+# For each one of the sources, the type is defined
+agent.sources.sqlSource.type = org.keedio.flume.source.SQLSource
 
-agent.sources = sql-source
-agent.sources.sql-source.type = org.keedio.flume.source.SQLSource  
+agent.sources.sqlSource.hibernate.connection.url = jdbc:db2://192.168.56.70:50000/sample
 
-# URL to connect to database
-agent.sources.sql-source.connection.url = jdbc:mysql://host:port/database
+# Hibernate Database connection properties
+agent.sources.sqlSource.hibernate.connection.user = db2inst1
+agent.sources.sqlSource.hibernate.connection.password = db2inst1
+agent.sources.sqlSource.hibernate.connection.autocommit = true
+agent.sources.sqlSource.hibernate.dialect = org.hibernate.dialect.DB2Dialect
+agent.sources.sqlSource.hibernate.connection.driver_class = com.ibm.db2.jcc.DB2Driver
 
-# Database connection properties
-agent.sources.sql-source.user = username  
-agent.sources.sql-source.password = userpassword  
-agent.sources.sql-source.table = table  
+#agent.sources.sqlSource.table = employee1
 
 # Columns to import to kafka (default * import entire row)
-agent.sources.sql-source.columns.to.select = *  
-
-# Increment value is from you want to start taking data from tables (0 will import entire table)
-agent.sources.sql-source.incremental.value = 0
+#agent.sources.sqlSource.columns.to.select = *
 
 # Query delay, each configured milisecond the query will be sent
-agent.sources.sql-source.run.query.delay=10000 
+agent.sources.sqlSource.run.query.delay=10000
 
 # Status file is used to save last readed row
-agent.sources.sql-source.status.file.path = /var/lib/flume
-agent.sources.sql-source.status.file.name = sql-source.status
+agent.sources.sqlSource.status.file.path = /var/log/flume
+agent.sources.sqlSource.status.file.name = sqlSource.status
 
-# Custom query
-agent.sources.sql-source.custom.query = SELECT * FROM table WHERE something;
-agent.sources.sql-source.batch.size = 1000;
-agent.sources.sql-source.max.rows = 10000;
+# Custom query
+agent.sources.sqlSource.start.from = 19700101000000000000
+agent.sources.sqlSource.custom.query = SELECT * FROM (select DECIMAL(test) * 1000000 AS INCREMENTAL, EMPLOYEE1.* from employee1 UNION select DECIMAL(test) * 1000000 AS INCREMENTAL, EMPLOYEE2.* from employee2) WHERE INCREMENTAL > $@$ ORDER BY INCREMENTAL ASC
 
-# Connected channel names
-agent.sources.sql-source.channels = memoryChannel
+agent.sources.sqlSource.batch.size = 1000
+agent.sources.sqlSource.max.rows = 1000
 
+agent.sources.sqlSource.hibernate.connection.provider_class = org.hibernate.connection.C3P0ConnectionProvider
+agent.sources.sqlSource.hibernate.c3p0.min_size=1
+agent.sources.sqlSource.hibernate.c3p0.max_size=10
+
+# The channel can be defined as follows.
+agent.sources.sqlSource.channels = memoryChannel
 ```
 
 Troubles
