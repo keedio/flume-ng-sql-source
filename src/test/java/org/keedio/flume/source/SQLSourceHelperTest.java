@@ -1,10 +1,12 @@
 package org.keedio.flume.source;
 
 import java.io.File;
+import java.io.IOException;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.flume.Context;
 import org.apache.flume.conf.ConfigurationException;
 import org.junit.After;
@@ -35,7 +37,8 @@ public class SQLSourceHelperTest {
 		when(context.getInteger("run.query.delay", 10000)).thenReturn(10000);
 		when(context.getInteger("batch.size", 100)).thenReturn(100);
 		when(context.getInteger("max.rows", 10000)).thenReturn(10000);
-		when(context.getLong("incremental.value", 0L)).thenReturn(0L);
+		when(context.getString("incremental.value", "0")).thenReturn("0");
+		when(context.getString("start.from", "0")).thenReturn("0");
 	}
 
 	/*
@@ -57,14 +60,14 @@ public class SQLSourceHelperTest {
 	@Test
 	public void getCurrentIndex() {
 		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
-		assertEquals(0,sqlSourceHelper.getCurrentIndex());
+		assertEquals("0",sqlSourceHelper.getCurrentIndex());
 	}
 	
 	@Test
 	public void setCurrentIndex() {
 		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		sqlSourceHelper.setCurrentIndex("10");
-		assertEquals(10,sqlSourceHelper.getCurrentIndex());
+		assertEquals("10",sqlSourceHelper.getCurrentIndex());
 	}
 	
 	@Test
@@ -210,16 +213,21 @@ public class SQLSourceHelperTest {
 		sqlSourceHelper.updateStatusFile();
 
 		SQLSourceHelper sqlSourceHelper2 = new SQLSourceHelper(context,"Source Name");
-		assertEquals(10L, sqlSourceHelper2.getCurrentIndex());
+		assertEquals("10", sqlSourceHelper2.getCurrentIndex());
 	}
 	
 
 	
 	@After
 	public void deleteDirectory(){
-		File file = new File("/tmp/flume");
-		if (file.exists()){
-			file.delete();
+		try {
+		
+			File file = new File("/tmp/flume");
+			if (file.exists())
+				FileUtils.deleteDirectory(file);
+		
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 
