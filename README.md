@@ -65,7 +65,7 @@ Mandatory properties in <b>bold</b>
 | max.rows | 10000| Max rows to import per query |
 | custom.query | - | Custom query to force a special request to the DB, be carefull. Check below explanation of this property. |
 | hibernate.connection.driver_class | -| Driver class to use by hibernate, if not specified the framework will auto asign one |
-| hibernate.dialect | - | Dialect to use by hibernate, if not specified the framework will auto asign one |
+| hibernate.dialect | - | Dialect to use by hibernate, if not specified the framework will auto asign one. Check https://docs.jboss.org/hibernate/orm/4.3/manual/en-US/html/ch03.html#configuration-optional-dialects for a complete list of available dialects |
 | hibernate.connection.provider_class | - | Set to org.hibernate.connection.C3P0ConnectionProvider to use C3P0 connection pool (recommended for production) |
 | hibernate.c3p0.min_size | - | Min connection pool size |
 | hibernate.c3p0.max_size | - | Max connection pool size |
