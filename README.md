@@ -80,6 +80,8 @@ A custom query is supported to bring the possibility of use entire SQL languaje.
 
 To avoid rows export repetitions use $@$ special character in WHERE clause, to incrementaly export not processed rows and the new ones inserted.
 
+IMPORTANT: For proper operation of Custom Query ensure that incremental field will be returned in the first position of the Query result.
+
 Example:
 ```
 agent.sources.sql-source.custom.query = SELECT incrementalField,field2 FROM table1 WHERE incrementalField > $@$ 
