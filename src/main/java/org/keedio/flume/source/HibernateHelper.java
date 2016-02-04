@@ -1,14 +1,16 @@
 package org.keedio.flume.source;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.hibernate.CacheMode;
+import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
-import org.hibernate.loader.custom.CustomQuery;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.transform.Transformers;
 import org.slf4j.Logger;
@@ -64,6 +66,9 @@ public class HibernateHelper {
 				.applySettings(config.getProperties()).build();
 		factory = config.buildSessionFactory(serviceRegistry);
 		session = factory.openSession();
+		session.setCacheMode(CacheMode.IGNORE);
+		
+		session.setDefaultReadOnly(sqlSourceHelper.isReadOnlySession());
 	}
 
 	/**
@@ -82,63 +87,60 @@ public class HibernateHelper {
 	 * @return The query result. Each Object is a cell content. <p>
 	 * The cell contents use database types (date,int,string...), 
 	 * keep in mind in case of future conversions/castings.
+	 * @throws InterruptedException 
 	 */
 	@SuppressWarnings("unchecked")
-	public List<List<Object>> executeQuery() {
+	public List<List<Object>> executeQuery() throws InterruptedException {
 		
-		List<List<Object>> rowsList ;
+		List<List<Object>> rowsList = new ArrayList<List<Object>>() ;
+		Query query;
 		
+		if (!session.isConnected()){
+			resetConnection();
+		}
+				
 		if (sqlSourceHelper.isCustomQuerySet()){
-			if (sqlSourceHelper.getMaxRows() == 0){
-				rowsList = session
-						.createSQLQuery(sqlSourceHelper.buildQuery())
-						.setResultTransformer(Transformers.TO_LIST).list();
-			}else{
-				rowsList = session
-					.createSQLQuery(sqlSourceHelper.buildQuery())
-					.setMaxResults(sqlSourceHelper.getMaxRows())
-					.setResultTransformer(Transformers.TO_LIST).list();
-			}
-			if (!rowsList.isEmpty())
-				sqlSourceHelper.setCurrentIndex(rowsList.get(rowsList.size()-1).get(0).toString());
+			
+			query = session.createSQLQuery(sqlSourceHelper.buildQuery());
+			
+			if (sqlSourceHelper.getMaxRows() != 0){
+				query = query.setMaxResults(sqlSourceHelper.getMaxRows());
+			}			
 		}
 		else
 		{
-			if (sqlSourceHelper.getMaxRows() == 0){
-				rowsList = session
-						.createSQLQuery(sqlSourceHelper.getQuery())
-						.setFirstResult(Integer.parseInt(sqlSourceHelper.getCurrentIndex()))
-						.setResultTransformer(Transformers.TO_LIST).list();
-			}else{
-				rowsList = session
+			query = session
 					.createSQLQuery(sqlSourceHelper.getQuery())
-					.setFirstResult(Integer.parseInt(sqlSourceHelper.getCurrentIndex()))
-					.setMaxResults(sqlSourceHelper.getMaxRows())
-					.setResultTransformer(Transformers.TO_LIST).list();
+					.setFirstResult(Integer.parseInt(sqlSourceHelper.getCurrentIndex()));
+			
+			if (sqlSourceHelper.getMaxRows() != 0){
+				query = query.setMaxResults(sqlSourceHelper.getMaxRows());
 			}
-			sqlSourceHelper.setCurrentIndex(Integer.toString((Integer.parseInt(sqlSourceHelper.getCurrentIndex())
-					+ rowsList.size())));
 		}
 		
+		try {
+			rowsList = query.setResultTransformer(Transformers.TO_LIST).list();
+		}catch (Exception e){
+			resetConnection();
+		}
 		
-
+		if (!rowsList.isEmpty()){
+			if (sqlSourceHelper.isCustomQuerySet()){
+					sqlSourceHelper.setCurrentIndex(rowsList.get(rowsList.size()-1).get(0).toString());
+			}
+			else
+			{
+				sqlSourceHelper.setCurrentIndex(Integer.toString((Integer.parseInt(sqlSourceHelper.getCurrentIndex())
+						+ rowsList.size())));
+			}
+		}
+		
 		return rowsList;
 	}
 
-	public void resetConnectionAndSleep() throws InterruptedException {
-		
-		long startTime = System.currentTimeMillis();
-		
-		if (!sqlSourceHelper.isCustomQuerySet()){
-			session.close();
-			factory.close();
-			Thread.sleep(sqlSourceHelper.getRunQueryDelay()/2);
-			establishSession();
-		}
-		
-		long execTime = System.currentTimeMillis() - startTime;
-		
-		if (execTime < sqlSourceHelper.getRunQueryDelay())
-			Thread.sleep(sqlSourceHelper.getRunQueryDelay() - execTime);
+	private void resetConnection() throws InterruptedException{
+		session.close();
+		factory.close();
+		establishSession();
 	}
 }
