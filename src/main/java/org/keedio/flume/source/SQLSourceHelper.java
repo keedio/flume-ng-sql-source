@@ -54,6 +54,8 @@ public class SQLSourceHelper {
 	private Context context;
 	
 	private Map<String,String> statusFileJsonMap = new LinkedHashMap<String,String>();
+
+	private boolean readOnlySession;
 	
 	private static final String DEFAULT_STATUS_DIRECTORY = "/var/lib/flume";
 	private static final int DEFAULT_QUERY_DELAY = 10000;
@@ -66,7 +68,6 @@ public class SQLSourceHelper {
 	private static final String COLUMNS_TO_SELECT_STATUS_FILE = "ColumnsToSelect";
 	private static final String TABLE_STATUS_FILE = "Table";
 	private static final String LAST_INDEX_STATUS_FILE = "LastIndex";
-	private static final String INCREMENTAL_COLUMN_NAME_STATUS_FILE = "IncrementalColumn";
 	private static final String QUERY_STATUS_FILE = "Query";
 	
 
@@ -90,11 +91,11 @@ public class SQLSourceHelper {
 		batchSize = context.getInteger("batch.size",DEFAULT_BATCH_SIZE);
 		maxRows = context.getInteger("max.rows",DEFAULT_MAX_ROWS);
 		connectionURL = context.getString("hibernate.connection.url");
+		readOnlySession = context.getBoolean("read.only",false);
 		
 		this.sourceName = sourceName;
 		startFrom = context.getString("start.from",DEFAULT_INCREMENTAL_VALUE);
 		statusFileJsonMap = new LinkedHashMap<String, String>();
-		
 		
 		checkMandatoryProperties();
                 
@@ -177,9 +178,15 @@ public class SQLSourceHelper {
 		
 		statusFileJsonMap.put(SOURCE_NAME_STATUS_FILE, sourceName);
 		statusFileJsonMap.put(URL_STATUS_FILE, connectionURL);
-		statusFileJsonMap.put(COLUMNS_TO_SELECT_STATUS_FILE, columnsToSelect);
-		statusFileJsonMap.put(TABLE_STATUS_FILE, table);
 		statusFileJsonMap.put(LAST_INDEX_STATUS_FILE, currentIndex);
+		
+		if (isCustomQuerySet()){
+			statusFileJsonMap.put(QUERY_STATUS_FILE,customQuery);
+		}else{
+			statusFileJsonMap.put(COLUMNS_TO_SELECT_STATUS_FILE, columnsToSelect);
+			statusFileJsonMap.put(TABLE_STATUS_FILE, table);
+		}
+			
 			
 		try {
 			Writer fileWriter = new FileWriter(file,false);
@@ -265,8 +272,8 @@ public class SQLSourceHelper {
 		
 		// Check custom query values
 		if (customQuery != null){
-			if (!statusFileJsonMap.containsKey(QUERY_STATUS_FILE) || !statusFileJsonMap.containsKey(INCREMENTAL_COLUMN_NAME_STATUS_FILE)){
-				LOG.error("Expected Query and IncrementalColumn fields in status file");	
+			if (!statusFileJsonMap.containsKey(QUERY_STATUS_FILE)){
+				LOG.error("Expected Query field in status file");	
 				throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
 			}
 			if (!statusFileJsonMap.get(QUERY_STATUS_FILE).equals(customQuery)){
@@ -345,4 +352,10 @@ public class SQLSourceHelper {
 	Context getContext() {
 		return context;
 	}
+
+
+	boolean isReadOnlySession() {
+		return readOnlySession;
+	}
+
 }
