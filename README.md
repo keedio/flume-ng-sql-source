@@ -63,6 +63,7 @@ Mandatory properties in <b>bold</b>
 | run.query.delay | 10000 | ms to wait between run queries |
 | batch.size| 100 | Batch size to send events to flume channel |
 | max.rows | 10000| Max rows to import per query |
+| read.only | false| Sets read only session with DDBB |
 | custom.query | - | Custom query to force a special request to the DB, be carefull. Check below explanation of this property. |
 | hibernate.connection.driver_class | -| Driver class to use by hibernate, if not specified the framework will auto asign one |
 | hibernate.dialect | - | Dialect to use by hibernate, if not specified the framework will auto asign one. Check https://docs.jboss.org/hibernate/orm/4.3/manual/en-US/html/ch03.html#configuration-optional-dialects for a complete list of available dialects |
