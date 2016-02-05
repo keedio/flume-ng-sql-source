@@ -7,9 +7,9 @@
 
     <packaging>jar</packaging>
 
-    <name>${project.groupId}:${project.artifactId}</name>
+    <name>Flume SQL Source</name>
 
-    <description>This project is used for flume-ng to communicate with sql databases.</description>
+    <description>This project is used for flume-ng to import data from SQL databases.</description>
 
     <url>https://github.com/keedio/flume-ng-sql-source</url>
 
@@ -150,5 +150,9 @@
             </plugin>
         </plugins>
     </build>
+    <organization>
+    	<name>Keedio</name>
+    	<url>www.keedio.org</url>
+    </organization>
 </project>
 
