@@ -3,13 +3,13 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.keedio.flume.flume-ng-sources</groupId>
     <artifactId>flume-ng-sql-source</artifactId>
-    <version>1.4.2-SNAPSHOT</version>
+    <version>1.4.1</version>
 
     <packaging>jar</packaging>
 
     <name>Flume SQL Source</name>
 
-    <description>This project is used for flume-ng to communicate with sql databases.</description>
+    <description>This project is used for flume-ng to import data from SQL databases.</description>
 
     <url>https://github.com/keedio/flume-ng-sql-source</url>
 
@@ -150,5 +150,9 @@
             </plugin>
         </plugins>
     </build>
+    <organization>
+    	<name>Keedio</name>
+    	<url>www.keedio.org</url>
+    </organization>
 </project>
 
