@@ -119,7 +119,7 @@ public class HibernateHelper {
 		}
 		
 		try {
-			rowsList = query.setResultTransformer(Transformers.TO_LIST).list();
+			rowsList = query.setFetchSize(sqlSourceHelper.getMaxRows()).setResultTransformer(Transformers.TO_LIST).list();
 		}catch (Exception e){
 			resetConnection();
 		}
