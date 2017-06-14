@@ -121,6 +121,7 @@ public class HibernateHelper {
 		try {
 			rowsList = query.setFetchSize(sqlSourceHelper.getMaxRows()).setResultTransformer(Transformers.TO_LIST).list();
 		}catch (Exception e){
+			LOG.error("Exception thrown, resetting connection.",e);
 			resetConnection();
 		}
 		
