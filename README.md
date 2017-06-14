@@ -59,6 +59,7 @@ Mandatory properties in <b>bold</b>
 | <b>status.file.name</b> | - | Local file name to save last row number read |
 | status.file.path | /var/lib/flume | Path to save the status file |
 | start.from | 0 | Start value to import data |
+| delimiter.entry | , | delimiter of incoming entry | 
 | columns.to.select | * | Which colums of the table will be selected |
 | run.query.delay | 10000 | ms to wait between run queries |
 | batch.size| 100 | Batch size to send events to flume channel |
@@ -122,6 +123,7 @@ agent.sources.sqlSource.custom.query = SELECT * FROM (select DECIMAL(test) * 100
 
 agent.sources.sqlSource.batch.size = 1000
 agent.sources.sqlSource.max.rows = 1000
+agent.sources.sqlSource.delimiter.entry = |
 
 agent.sources.sqlSource.hibernate.connection.provider_class = org.hibernate.connection.C3P0ConnectionProvider
 agent.sources.sqlSource.hibernate.c3p0.min_size=1
