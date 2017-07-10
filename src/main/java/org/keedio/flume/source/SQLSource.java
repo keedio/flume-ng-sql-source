@@ -73,7 +73,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         hibernateHelper.establishSession();
        
         /* Instantiate the CSV Writer */
-        csvWriter = new CSVWriter(new ChannelWriter());
+        csvWriter = new CSVWriter(new ChannelWriter(),sqlSourceHelper.getDelimiterEntry().charAt(0));
         
     }  
     
@@ -90,7 +90,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 						
 			if (!result.isEmpty())
 			{
-				csvWriter.writeAll(sqlSourceHelper.getAllRows(result),true);
+				csvWriter.writeAll(sqlSourceHelper.getAllRows(result),sqlSourceHelper.encloseByQuotes());
 				csvWriter.flush();
 				sqlSourceCounter.incrementEventCount(result.size());
 				

@@ -49,7 +49,8 @@ public class SQLSourceHelper {
 	private int runQueryDelay, batchSize, maxRows;
 	private String startFrom, currentIndex;
 	private String statusFilePath, statusFileName, connectionURL, table,
-    columnsToSelect, customQuery, query, sourceName;
+    columnsToSelect, customQuery, query, sourceName, delimiterEntry;
+	private Boolean encloseByQuotes;
 
 	private Context context;
 	
@@ -62,6 +63,8 @@ public class SQLSourceHelper {
 	private static final int DEFAULT_BATCH_SIZE = 100;
 	private static final int DEFAULT_MAX_ROWS = 10000;
 	private static final String DEFAULT_INCREMENTAL_VALUE = "0";
+	private static final String DEFAULT_DELIMITER_ENTRY = ",";
+	private static final Boolean DEFAULT_ENCLOSE_BY_QUOTES = true;
 	
 	private static final String SOURCE_NAME_STATUS_FILE = "SourceName";
 	private static final String URL_STATUS_FILE = "URL";
@@ -69,6 +72,7 @@ public class SQLSourceHelper {
 	private static final String TABLE_STATUS_FILE = "Table";
 	private static final String LAST_INDEX_STATUS_FILE = "LastIndex";
 	private static final String QUERY_STATUS_FILE = "Query";
+
 	
 
 
@@ -76,6 +80,7 @@ public class SQLSourceHelper {
 	 * Builds an SQLSourceHelper containing the configuration parameters and
 	 * usefull utils for SQL Source
 	 * @param context Flume source context, contains the properties from configuration file
+	 * @param sourceName source file name for store status
 	 */
 	public SQLSourceHelper(Context context, String sourceName){
 		
@@ -95,6 +100,8 @@ public class SQLSourceHelper {
 		
 		this.sourceName = sourceName;
 		startFrom = context.getString("start.from",DEFAULT_INCREMENTAL_VALUE);
+		delimiterEntry = context.getString("delimiter.entry",DEFAULT_DELIMITER_ENTRY);
+		encloseByQuotes = context.getBoolean("enclose.by.quotes", DEFAULT_ENCLOSE_BY_QUOTES);
 		statusFileJsonMap = new LinkedHashMap<String, String>();
 		
 		checkMandatoryProperties();
@@ -357,5 +364,11 @@ public class SQLSourceHelper {
 	boolean isReadOnlySession() {
 		return readOnlySession;
 	}
+	
+	boolean encloseByQuotes() {
+		return encloseByQuotes;
+	}
+
+	String getDelimiterEntry() {return delimiterEntry;}
 
 }

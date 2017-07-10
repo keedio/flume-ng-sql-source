@@ -56,10 +56,12 @@ Mandatory properties in <b>bold</b>
 | <b>hibernate.connection.user</b> | - | Username to connect with the database |
 | <b>hibernate.connection.password</b> | - | Password to connect with the database |
 | <b>table</b> | - | Table to export data |
-| <b>status.file.name</b> | - | Local file name to save last row number readed |
+| <b>status.file.name</b> | - | Local file name to save last row number read |
 | status.file.path | /var/lib/flume | Path to save the status file |
 | start.from | 0 | Start value to import data |
-| columns.to.select | * | Wich colums of the table will be selected |
+| delimiter.entry | , | delimiter of incoming entry | 
+| enclose.by.quotes | true | If Quotes are applied to all values in the output. |
+| columns.to.select | * | Which colums of the table will be selected |
 | run.query.delay | 10000 | ms to wait between run queries |
 | batch.size| 100 | Batch size to send events to flume channel |
 | max.rows | 10000| Max rows to import per query |
@@ -77,9 +79,9 @@ If no custom query is set, ```SELECT <columns.to.select> FROM <table>``` will be
 
 Custom Query
 -------------
-A custom query is supported to bring the possibility of use entire SQL languaje. This is powerfull, but risky, be carefull with the custom queries used.  
+A custom query is supported to bring the possibility of using the entire SQL language. This is powerful, but risky, be careful with the custom queries used.  
 
-To avoid rows export repetitions use $@$ special character in WHERE clause, to incrementaly export not processed rows and the new ones inserted.
+To avoid row export repetitions use the $@$ special character in WHERE clause, to incrementaly export not processed rows and the new ones inserted.
 
 IMPORTANT: For proper operation of Custom Query ensure that incremental field will be returned in the first position of the Query result.
 
@@ -122,6 +124,7 @@ agent.sources.sqlSource.custom.query = SELECT * FROM (select DECIMAL(test) * 100
 
 agent.sources.sqlSource.batch.size = 1000
 agent.sources.sqlSource.max.rows = 1000
+agent.sources.sqlSource.delimiter.entry = |
 
 agent.sources.sqlSource.hibernate.connection.provider_class = org.hibernate.connection.C3P0ConnectionProvider
 agent.sources.sqlSource.hibernate.c3p0.min_size=1
@@ -131,7 +134,7 @@ agent.sources.sqlSource.hibernate.c3p0.max_size=10
 agent.sources.sqlSource.channels = memoryChannel
 ```
 
-Troubles
+Known Issues
 ---------
 An issue with Java SQL Types and Hibernate Types could appear Using SQL Server databases and SQL Server Dialect coming with Hibernate.  
   
