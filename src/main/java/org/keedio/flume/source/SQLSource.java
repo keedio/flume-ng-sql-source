@@ -90,7 +90,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 						
 			if (!result.isEmpty())
 			{
-				csvWriter.writeAll(sqlSourceHelper.getAllRows(result),true);
+				csvWriter.writeAll(sqlSourceHelper.getAllRows(result),sqlSourceHelper.encloseByQuotes());
 				csvWriter.flush();
 				sqlSourceCounter.incrementEventCount(result.size());
 				

@@ -60,6 +60,7 @@ Mandatory properties in <b>bold</b>
 | status.file.path | /var/lib/flume | Path to save the status file |
 | start.from | 0 | Start value to import data |
 | delimiter.entry | , | delimiter of incoming entry | 
+| enclose.by.quotes | true | If Quotes are applied to all values in the output. |
 | columns.to.select | * | Which colums of the table will be selected |
 | run.query.delay | 10000 | ms to wait between run queries |
 | batch.size| 100 | Batch size to send events to flume channel |
