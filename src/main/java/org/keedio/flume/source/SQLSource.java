@@ -32,6 +32,7 @@ import org.apache.flume.PollableSource;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.event.SimpleEvent;
 import org.apache.flume.source.AbstractSource;
+import org.apache.flume.source.PollableSourceConstants;
 import org.keedio.flume.metrics.SqlSourceCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,9 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
     private SqlSourceCounter sqlSourceCounter;
     private CSVWriter csvWriter;
     private HibernateHelper hibernateHelper;
+
+    private long backoffSleepIncrement = PollableSourceConstants.DEFAULT_BACKOFF_SLEEP_INCREMENT;
+    private long maxBackoffSleep = PollableSourceConstants.DEFAULT_MAX_BACKOFF_SLEEP;
        
     /**
      * Configure the source, load configuration properties and establish connection with database
@@ -74,6 +78,12 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
        
         /* Instantiate the CSV Writer */
         csvWriter = new CSVWriter(new ChannelWriter(),sqlSourceHelper.getDelimiterEntry().charAt(0));
+
+      backoffSleepIncrement =
+          context.getLong(PollableSourceConstants.BACKOFF_SLEEP_INCREMENT,
+              PollableSourceConstants.DEFAULT_BACKOFF_SLEEP_INCREMENT);
+      maxBackoffSleep = context.getLong(PollableSourceConstants.MAX_BACKOFF_SLEEP,
+          PollableSourceConstants.DEFAULT_MAX_BACKOFF_SLEEP);
         
     }  
     
@@ -110,6 +120,16 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 			return Status.BACKOFF;
 		}
 	}
+
+  @Override
+  public long getBackOffSleepIncrement() {
+    return backoffSleepIncrement;
+  }
+
+  @Override
+  public long getMaxBackOffSleepInterval() {
+    return maxBackoffSleep;
+  }
  
 	/**
 	 * Starts the source. Starts the metrics counter.
