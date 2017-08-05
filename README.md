@@ -52,9 +52,9 @@ Mandatory properties in <b>bold</b>
 | ----------------------- | :-----: | :---------- |
 | <b>channels</b> | - | Connected channel names |
 | <b>type</b> | - | The component type name, needs to be org.keedio.flume.source.SQLSource  |
-| <b>hibernate.connection.url</b> | - | Url to connect with the remote Database |
-| <b>hibernate.connection.user</b> | - | Username to connect with the database |
-| <b>hibernate.connection.password</b> | - | Password to connect with the database |
+| <b>hibernate.hikari.dataSource.url</b> | - | Url to connect with the remote Database |
+| <b>hibernate.hikari.dataSource.user</b> | - | Username to connect with the database |
+| <b>hibernate.hikari.dataSource.password</b> | - | Password to connect with the database |
 | <b>table</b> | - | Table to export data |
 | <b>status.file.name</b> | - | Local file name to save last row number read |
 | status.file.path | /var/lib/flume | Path to save the status file |
@@ -67,11 +67,11 @@ Mandatory properties in <b>bold</b>
 | max.rows | 10000| Max rows to import per query |
 | read.only | false| Sets read only session with DDBB |
 | custom.query | - | Custom query to force a special request to the DB, be carefull. Check below explanation of this property. |
-| hibernate.connection.driver_class | -| Driver class to use by hibernate, if not specified the framework will auto asign one |
+| hibernate.hikari.dataSourceClassName | -| Driver class to use by hibernate, if not specified the framework will auto asign one |
 | hibernate.dialect | - | Dialect to use by hibernate, if not specified the framework will auto asign one. Check https://docs.jboss.org/hibernate/orm/4.3/manual/en-US/html/ch03.html#configuration-optional-dialects for a complete list of available dialects |
-| hibernate.connection.provider_class | - | Set to org.hibernate.connection.C3P0ConnectionProvider to use C3P0 connection pool (recommended for production) |
-| hibernate.c3p0.min_size | - | Min connection pool size |
-| hibernate.c3p0.max_size | - | Max connection pool size |
+| hibernate.connection.provider_class | - | Set to `com.zaxxer.hikari.hibernate.HikariConnectionProvider` to use Hikari connection pool (recommended for production) |
+| hibernate.hikari.minimumIdle | - | Min connection idle pool size |
+| hibernate.hikari.maximumPoolSize | - | Max connection pool size |
 
 Standard Query
 -------------
@@ -97,14 +97,15 @@ Configuration example
 # For each one of the sources, the type is defined
 agent.sources.sqlSource.type = org.keedio.flume.source.SQLSource
 
-agent.sources.sqlSource.hibernate.connection.url = jdbc:db2://192.168.56.70:50000/sample
+agent.sources.sqlSource.hibernate.connection.provider_class=com.zaxxer.hikari.hibernate.HikariConnectionProvider
+agent.sources.sqlSource.hibernate.hikari.minimumIdle=5
+agent.sources.sqlSource.hibernate.hikari.maximumPoolSize=10
+agent.sources.sqlSource.hibernate.hikari.idleTimeout=30000
 
-# Hibernate Database connection properties
-agent.sources.sqlSource.hibernate.connection.user = db2inst1
-agent.sources.sqlSource.hibernate.connection.password = db2inst1
-agent.sources.sqlSource.hibernate.connection.autocommit = true
-agent.sources.sqlSource.hibernate.dialect = org.hibernate.dialect.DB2Dialect
-agent.sources.sqlSource.hibernate.connection.driver_class = com.ibm.db2.jcc.DB2Driver
+agent.sources.sqlSource.hibernate.hikari.dataSourceClassName=org.postgresql.ds.PGSimpleDataSource
+agent.sources.sqlSource.hibernate.hikari.dataSource.url=jdbc:postgresql://localhost:5432/mydb
+agent.sources.sqlSource.hibernate.hikari.dataSource.user=xxxxx
+agent.sources.sqlSource.hibernate.hikari.dataSource.password=xxxxx
 
 #agent.sources.sqlSource.table = employee1
 
@@ -125,10 +126,6 @@ agent.sources.sqlSource.custom.query = SELECT * FROM (select DECIMAL(test) * 100
 agent.sources.sqlSource.batch.size = 1000
 agent.sources.sqlSource.max.rows = 1000
 agent.sources.sqlSource.delimiter.entry = |
-
-agent.sources.sqlSource.hibernate.connection.provider_class = org.hibernate.connection.C3P0ConnectionProvider
-agent.sources.sqlSource.hibernate.c3p0.min_size=1
-agent.sources.sqlSource.hibernate.c3p0.max_size=10
 
 # The channel can be defined as follows.
 agent.sources.sqlSource.channels = memoryChannel

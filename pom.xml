@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.keedio.flume.flume-ng-sources</groupId>
     <artifactId>flume-ng-sql-source</artifactId>
-    <version>1.4.4</version>
+    <version>1.4.4-SNAPSHOT</version>
   
     <packaging>jar</packaging>
 
@@ -62,12 +62,12 @@
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-core</artifactId>
-            <version>4.3.10.Final</version>
+            <version>4.3.11.Final</version>
         </dependency>
         <dependency>
             <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-c3p0</artifactId>
-            <version>4.3.10.Final</version>
+            <artifactId>hibernate-hikaricp</artifactId>
+            <version>4.3.11.Final</version>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
@@ -96,6 +96,25 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>com.theoryinpractise</groupId>
+                <artifactId>googleformatter-maven-plugin</artifactId>
+                <version>1.3.1</version>
+                <executions>
+                    <execution>
+                        <id>reformat-sources</id>
+                        <configuration>
+                            <includeStale>false</includeStale>
+                            <style>GOOGLE</style>
+                            <skip>false</skip>
+                        </configuration>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                        <phase>process-sources</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.1</version>
@@ -114,6 +133,16 @@
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>junit:junit</exclude>
+                                    <exclude>jmock:*</exclude>
+                                    <exclude>org.hamcrest:hamcrest-core</exclude>
+                                    <exclude>org.apache.maven:lib:tests</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
