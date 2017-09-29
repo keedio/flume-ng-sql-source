@@ -29,7 +29,7 @@ Download the official mysql jdbc driver and copy in libext flume plugins directo
 ```
 $ wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.35.tar.gz
 $ tar xzf mysql-connector-java-5.1.35.tar.gz
-$ cp mysql-connector-java-5.1.35-bin.jar $FLUME_HOME/plugins.d/lib/sql-source/libext
+$ cp mysql-connector-java-5.1.35-bin.jar $FLUME_HOME/plugins.d/sql-source/libext
 ```
 
 ##### Microsoft SQLServer
@@ -37,7 +37,7 @@ Download the official Microsoft 4.1 Sql Server jdbc driver and copy in libext fl
 Download URL: https://www.microsoft.com/es-es/download/details.aspx?id=11774  
 ```
 $ tar xzf sqljdbc_4.1.5605.100_enu.tar.gz
-$ cp sqljdbc_4.1/enu/sqljdbc41.jar $FLUME_HOME/plugins.d/lib/sql-source/libext
+$ cp sqljdbc_4.1/enu/sqljdbc41.jar $FLUME_HOME/plugins.d/sql-source/libext
 ```
 
 ##### IBM DB2
