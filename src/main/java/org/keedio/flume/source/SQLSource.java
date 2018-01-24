@@ -45,7 +45,16 @@ import com.opencsv.CSVWriter;
  * @author <a href="mailto:mvalle@keedio.com">Marcelo Valle</a>
  */
 public class SQLSource extends AbstractSource implements Configurable, PollableSource {
-    
+    @Override
+    public long getBackOffSleepIncrement() {
+        return 0;
+    }
+
+    @Override
+    public long getMaxBackOffSleepInterval() {
+        return 0;
+    }
+
     private static final Logger LOG = LoggerFactory.getLogger(SQLSource.class);
     protected SQLSourceHelper sqlSourceHelper;
     private SqlSourceCounter sqlSourceCounter;
