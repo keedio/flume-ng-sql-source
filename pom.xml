@@ -6,9 +6,7 @@
     <version>1.5.0</version>
 
     <packaging>jar</packaging>
-
     <name>Flume SQL Source</name>
-
     <description>This project is used for flume-ng to import data from SQL databases.</description>
 
     <url>https://github.com/keedio/flume-ng-sql-source</url>
