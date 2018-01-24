@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.keedio.flume.flume-ng-sources</groupId>
     <artifactId>flume-ng-sql-source</artifactId>
-    <version>1.4.4-SNAPSHOT</version>
+    <version>1.5.0</version>
 
     <packaging>jar</packaging>
 
@@ -51,7 +51,7 @@
         <dependency>
             <groupId>org.apache.flume</groupId>
             <artifactId>flume-ng-core</artifactId>
-            <version>1.5.2</version>
+            <version>1.8.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
