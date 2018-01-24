@@ -150,3 +150,8 @@ Special thanks
 
 I used flume-ng-kafka to guide me (https://github.com/baniuyao/flume-ng-kafka-source.git).
 Thanks to [Frank Yao](https://github.com/baniuyao).
+
+Version History
+---------------
+Actual stable version is 1.5.0 (compatible with Apache Flume 1.8.0)
+Previous stable version is 1.4.3 (compatible with Apache Flume prior to 1.7.0)
