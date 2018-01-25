@@ -6,11 +6,9 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import org.hibernate.cfg.Configuration;
 import org.json.simple.JSONValue;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -49,7 +47,7 @@ public class SQLSourceHelper {
 	private int runQueryDelay, batchSize, maxRows;
 	private String startFrom, currentIndex;
 	private String statusFilePath, statusFileName, connectionURL, table,
-    columnsToSelect, customQuery, query, sourceName, delimiterEntry;
+    columnsToSelect, customQuery, query, sourceName, delimiterEntry, connectionUserName, connectionPassword;
 	private Boolean encloseByQuotes;
 
 	private Context context;
@@ -73,9 +71,6 @@ public class SQLSourceHelper {
 	private static final String LAST_INDEX_STATUS_FILE = "LastIndex";
 	private static final String QUERY_STATUS_FILE = "Query";
 
-	
-
-
 	/**
 	 * Builds an SQLSourceHelper containing the configuration parameters and
 	 * usefull utils for SQL Source
@@ -96,6 +91,8 @@ public class SQLSourceHelper {
 		batchSize = context.getInteger("batch.size",DEFAULT_BATCH_SIZE);
 		maxRows = context.getInteger("max.rows",DEFAULT_MAX_ROWS);
 		connectionURL = context.getString("hibernate.connection.url");
+		connectionUserName = context.getString("hibernate.connection.user");
+		connectionPassword = context.getString("hibernate.connection.password");
 		readOnlySession = context.getBoolean("read.only",false);
 		
 		this.sourceName = sourceName;
@@ -295,7 +292,7 @@ public class SQLSourceHelper {
 		file.renameTo(new File(statusFilePath + "/" + statusFileName + ".bak." + System.currentTimeMillis()));		
 	}
 	
-	private void checkMandatoryProperties() {
+	public void checkMandatoryProperties() {
 		
 		if (connectionURL == null){
 			throw new ConfigurationException("hibernate.connection.url property not set");
@@ -305,6 +302,14 @@ public class SQLSourceHelper {
 		}
 		if (table == null && customQuery == null){
 			throw new ConfigurationException("property table not set");
+		}
+
+		if (connectionUserName == null) {
+			throw new ConfigurationException("hibernate.connection.user property not set");
+		}
+
+		if (connectionPassword == null){
+			throw new ConfigurationException("hibernate.connection.password property not set");
 		}
 	}
 
@@ -370,5 +375,16 @@ public class SQLSourceHelper {
 	}
 
 	String getDelimiterEntry() {return delimiterEntry;}
+
+
+
+	public String getConnectionUserName() {
+		return connectionUserName;
+	}
+
+	public String getConnectionPassword() {
+		return connectionPassword;
+	}
+
 
 }

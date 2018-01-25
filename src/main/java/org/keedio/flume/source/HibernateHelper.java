@@ -42,7 +42,10 @@ public class HibernateHelper {
 
 		this.sqlSourceHelper = sqlSourceHelper;
 		Context context = sqlSourceHelper.getContext();
-		
+
+		/* check for mandatory propertis */
+		sqlSourceHelper.checkMandatoryProperties();
+
 		Map<String,String> hibernateProperties = context.getSubProperties("hibernate.");
 		Iterator<Map.Entry<String,String>> it = hibernateProperties.entrySet().iterator();
 		
@@ -53,6 +56,7 @@ public class HibernateHelper {
 			e = it.next();
 			config.setProperty("hibernate." + e.getKey(), e.getValue());
 		}
+
 	}
 
 	/**
