@@ -39,6 +39,8 @@ public class SQLSourceHelperTest {
 		when(context.getInteger("max.rows", 10000)).thenReturn(10000);
 		when(context.getString("incremental.value", "0")).thenReturn("0");
 		when(context.getString("start.from", "0")).thenReturn("0");
+		when(context.getString("hibernate.connection.user")).thenReturn("user");
+		when(context.getString("hibernate.connection.password")).thenReturn("password");
 	}
 
 	/*
@@ -214,6 +216,18 @@ public class SQLSourceHelperTest {
 
 		SQLSourceHelper sqlSourceHelper2 = new SQLSourceHelper(context,"Source Name");
 		assertEquals("10", sqlSourceHelper2.getCurrentIndex());
+	}
+
+	@Test
+	public void getUserName() {
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
+		assertEquals("user", sqlSourceHelper.getConnectionUserName());
+	}
+
+	@Test
+	public void getPassword() {
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
+		assertEquals("password", sqlSourceHelper.getConnectionPassword());
 	}
 	
 
