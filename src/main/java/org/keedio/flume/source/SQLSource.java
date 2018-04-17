@@ -38,6 +38,10 @@ import org.slf4j.LoggerFactory;
 
 import com.opencsv.CSVWriter;
 
+/*Support UTF-8 character encoding.*/
+import com.google.common.base.Charsets;
+import java.nio.charset.Charset;
+
 
 /**
  * A Source to read data from a SQL database. This source ask for new data in a table each configured time.<p>
@@ -159,7 +163,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
             Event event = new SimpleEvent();
             
             String s = new String(cbuf);
-            event.setBody(s.substring(off, len-1).getBytes());
+            event.setBody(s.substring(off, len-1).getBytes(Charset.forName(sqlSourceHelper.getDefaultCharsetResultSet())));
             
             Map<String, String> headers;
             headers = new HashMap<String, String>();
