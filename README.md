@@ -72,6 +72,7 @@ Mandatory properties in <b>bold</b>
 | hibernate.connection.provider_class | - | Set to org.hibernate.connection.C3P0ConnectionProvider to use C3P0 connection pool (recommended for production) |
 | hibernate.c3p0.min_size | - | Min connection pool size |
 | hibernate.c3p0.max_size | - | Max connection pool size |
+| default.charset.resultset | UTF-8 | Result set from DB converted to charset character encoding |
 
 Standard Query
 -------------
@@ -153,5 +154,6 @@ Thanks to [Frank Yao](https://github.com/baniuyao).
 
 Version History
 ---------------
-Actual stable version is 1.5.0 (compatible with Apache Flume 1.8.0)
-Previous stable version is 1.4.3 (compatible with Apache Flume prior to 1.7.0)
++ Version 1.5.1 added charset encoding for result set is now configurable.
++ Stable version is 1.5.0 (compatible with Apache Flume 1.8.0)
++ Previous stable version is 1.4.3 (compatible with Apache Flume prior to 1.7.0)
