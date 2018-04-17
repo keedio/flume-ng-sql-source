@@ -163,7 +163,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
             Event event = new SimpleEvent();
             
             String s = new String(cbuf);
-            event.setBody(s.substring(off, len-1).getBytes(Charsets.UTF_8));
+            event.setBody(s.substring(off, len-1).getBytes(Charset.forName(sqlSourceHelper.getDefaultCharsetResultSet())));
             
             Map<String, String> headers;
             headers = new HashMap<String, String>();
