@@ -144,8 +144,10 @@ public class HibernateHelper {
 	}
 
 	private void resetConnection() throws InterruptedException{
-		session.close();
-		factory.close();
+		if(session.isOpen()){
+			session.close();
+			factory.close();
+		}
 		establishSession();
 	}
 }
