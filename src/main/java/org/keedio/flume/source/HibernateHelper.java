@@ -147,7 +147,9 @@ public class HibernateHelper {
 		if(session.isOpen()){
 			session.close();
 			factory.close();
+		} else {
+			establishSession();
 		}
-		establishSession();
+		
 	}
 }
