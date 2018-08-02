@@ -62,7 +62,7 @@ public class SQLSourceHelper {
   private static final int DEFAULT_BATCH_SIZE = 100;
   private static final int DEFAULT_MAX_ROWS = 10000;
   private static final String DEFAULT_INCREMENTAL_VALUE = "0";
-  private static final String DEFAULT_DELIMITER_ENTRY = ",";
+  private static final String DEFAULT_DELIMITER_ENTRY = "\u0001";
   private static final Boolean DEFAULT_ENCLOSE_BY_QUOTES = true;
 
   private static final String SOURCE_NAME_STATUS_FILE = "SourceName";
