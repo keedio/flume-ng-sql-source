@@ -130,22 +130,20 @@ public class HibernateHelper {
 		}
 		
 		if (!rowsList.isEmpty()){
-			if (sqlSourceHelper.isCustomQuerySet()){
-					sqlSourceHelper.setCurrentIndex(rowsList.get(rowsList.size()-1).get(0).toString());
-			}
-			else
-			{
-				sqlSourceHelper.setCurrentIndex(Integer.toString((Integer.parseInt(sqlSourceHelper.getCurrentIndex())
-						+ rowsList.size())));
-			}
+			sqlSourceHelper.setCurrentIndex(Integer.toString((Integer.parseInt(sqlSourceHelper.getCurrentIndex())
+					+ rowsList.size())));
 		}
 		
 		return rowsList;
 	}
 
 	private void resetConnection() throws InterruptedException{
-		session.close();
-		factory.close();
-		establishSession();
+		if(session.isOpen()){
+			session.close();
+			factory.close();
+		} else {
+			establishSession();
+		}
+		
 	}
 }
