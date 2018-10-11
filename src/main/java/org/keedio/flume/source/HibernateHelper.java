@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.hibernate.CacheMode;
+import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -29,7 +30,6 @@ public class HibernateHelper {
 			.getLogger(HibernateHelper.class);
 
 	private static SessionFactory factory;
-	private Session session;
 	private ServiceRegistry serviceRegistry;
 	private Configuration config;
 	private SQLSourceHelper sqlSourceHelper;
@@ -69,10 +69,6 @@ public class HibernateHelper {
 		serviceRegistry = new StandardServiceRegistryBuilder()
 				.applySettings(config.getProperties()).build();
 		factory = config.buildSessionFactory(serviceRegistry);
-		session = factory.openSession();
-		session.setCacheMode(CacheMode.IGNORE);
-		
-		session.setDefaultReadOnly(sqlSourceHelper.isReadOnlySession());
 	}
 
 	/**
@@ -82,7 +78,6 @@ public class HibernateHelper {
 
 		LOG.info("Closing hibernate session");
 
-		session.close();
 		factory.close();
 	}
 
@@ -98,7 +93,18 @@ public class HibernateHelper {
 		
 		List<List<Object>> rowsList = new ArrayList<List<Object>>() ;
 		Query query;
-		
+		Session session;
+
+		try{
+			session = factory.openSession();
+		}catch (HibernateException e){
+			resetConnection();
+			session = factory.openSession();
+		}
+
+		session.setCacheMode(CacheMode.IGNORE);
+		session.setDefaultReadOnly(sqlSourceHelper.isReadOnlySession());
+
 		if (!session.isConnected()){
 			resetConnection();
 		}
@@ -127,23 +133,21 @@ public class HibernateHelper {
 		}catch (Exception e){
 			LOG.error("Exception thrown, resetting connection.",e);
 			resetConnection();
+		}finally{
+			session.close();
 		}
 		
 		if (!rowsList.isEmpty()){
 			sqlSourceHelper.setCurrentIndex(Integer.toString((Integer.parseInt(sqlSourceHelper.getCurrentIndex())
 					+ rowsList.size())));
 		}
+		LOG.info("query " + sqlSourceHelper.getCurrentIndex() + " size: " + rowsList.size());
 		
 		return rowsList;
 	}
 
 	private void resetConnection() throws InterruptedException{
-		if(session.isOpen()){
-			session.close();
-			factory.close();
-		} else {
-			establishSession();
-		}
-		
+		factory.close();
+		establishSession();
 	}
 }
