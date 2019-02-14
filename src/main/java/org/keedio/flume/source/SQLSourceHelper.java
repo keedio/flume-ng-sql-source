@@ -49,7 +49,7 @@ public class SQLSourceHelper {
   private String statusFilePath, statusFileName, connectionURL, table,
     columnsToSelect, customQuery, query, sourceName, delimiterEntry, connectionUserName, connectionPassword,
 		defaultCharsetResultSet;
-  private Boolean encloseByQuotes;
+  private Boolean encloseByQuotes,noQuoteCharacter;
 
   private Context context;
 
@@ -72,6 +72,7 @@ public class SQLSourceHelper {
   private static final String LAST_INDEX_STATUS_FILE = "LastIndex";
   private static final String QUERY_STATUS_FILE = "Query";
   private static final String DEFAULT_CHARSET_RESULTSET = "UTF-8";
+  private static final Boolean DEFAULT_NO_QUOTE_CHARACTER = false;
 
   /**
    * Builds an SQLSourceHelper containing the configuration parameters and
@@ -104,7 +105,7 @@ public class SQLSourceHelper {
     encloseByQuotes = context.getBoolean("enclose.by.quotes", DEFAULT_ENCLOSE_BY_QUOTES);
     statusFileJsonMap = new LinkedHashMap<String, String>();
     defaultCharsetResultSet = context.getString("default.charset.resultset", DEFAULT_CHARSET_RESULTSET);
-
+    noQuoteCharacter = context.getBoolean("csv.quote.character", DEFAULT_NO_QUOTE_CHARACTER);
     checkMandatoryProperties();
 
     if (!(isStatusDirectoryCreated())) {
@@ -388,4 +389,5 @@ public class SQLSourceHelper {
   public String getDefaultCharsetResultSet() {
     return defaultCharsetResultSet;
   }
+  public Boolean getNoQuoteCharacter() { return noQuoteCharacter; }
 }

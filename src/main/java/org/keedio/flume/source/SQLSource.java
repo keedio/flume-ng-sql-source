@@ -86,7 +86,12 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
         hibernateHelper.establishSession();
        
         /* Instantiate the CSV Writer */
-        csvWriter = new CSVWriter(new ChannelWriter(),sqlSourceHelper.getDelimiterEntry().charAt(0));
+        if (sqlSourceHelper.getNoQuoteCharacter()){
+            csvWriter = new CSVWriter(new ChannelWriter(),sqlSourceHelper.getDelimiterEntry().charAt(0),CSVWriter.NO_QUOTE_CHARACTER);
+        }
+        else {
+            csvWriter = new CSVWriter(new ChannelWriter(),sqlSourceHelper.getDelimiterEntry().charAt(0));
+        }
         
     }  
     
