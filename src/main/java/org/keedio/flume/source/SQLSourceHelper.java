@@ -44,7 +44,7 @@ public class SQLSourceHelper {
   private static final Logger LOG = LoggerFactory.getLogger(SQLSourceHelper.class);
 
   private File file, directory;
-  private int runQueryDelay, batchSize, maxRows;
+  private int runQueryDelay, batchSize, maxRows, increaseColumn;
   private String startFrom, currentIndex;
   private String statusFilePath, statusFileName, connectionURL, table,
     columnsToSelect, customQuery, query, sourceName, delimiterEntry, connectionUserName, connectionPassword,
@@ -72,6 +72,7 @@ public class SQLSourceHelper {
   private static final String LAST_INDEX_STATUS_FILE = "LastIndex";
   private static final String QUERY_STATUS_FILE = "Query";
   private static final String DEFAULT_CHARSET_RESULTSET = "UTF-8";
+  private static final int DEFAULT_INCREASE_COLUMN = -1;
 
   /**
    * Builds an SQLSourceHelper containing the configuration parameters and
@@ -104,6 +105,7 @@ public class SQLSourceHelper {
     encloseByQuotes = context.getBoolean("enclose.by.quotes", DEFAULT_ENCLOSE_BY_QUOTES);
     statusFileJsonMap = new LinkedHashMap<String, String>();
     defaultCharsetResultSet = context.getString("default.charset.resultset", DEFAULT_CHARSET_RESULTSET);
+    increaseColumn = context.getInteger("increase.column", DEFAULT_INCREASE_COLUMN);
 
     checkMandatoryProperties();
 
@@ -387,5 +389,9 @@ public class SQLSourceHelper {
 
   public String getDefaultCharsetResultSet() {
     return defaultCharsetResultSet;
+  }
+
+  public int getIncreaseColumn() {
+    return increaseColumn;
   }
 }
