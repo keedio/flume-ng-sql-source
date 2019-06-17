@@ -41,6 +41,7 @@ public class SQLSourceHelperTest {
 		when(context.getString("start.from", "0")).thenReturn("0");
 		when(context.getString("hibernate.connection.user")).thenReturn("user");
 		when(context.getString("hibernate.connection.password")).thenReturn("password");
+		when(context.getInteger("increase.column",-1)).thenReturn(-1);
 	}
 
 	/*
@@ -96,6 +97,12 @@ public class SQLSourceHelperTest {
 		when(context.getString("incremental.column")).thenReturn("incremental");
 		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
 		assertEquals("SELECT column FROM table",sqlSourceHelper.getQuery());
+	}
+
+	@Test
+	public void getIncreaseColumn() {
+		SQLSourceHelper sqlSourceHelper = new SQLSourceHelper(context,"Source Name");
+		assertEquals(-1,sqlSourceHelper.getIncreaseColumn());
 	}
 	
 	@Test
