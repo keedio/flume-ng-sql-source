@@ -130,8 +130,14 @@ public class HibernateHelper {
 		}
 		
 		if (!rowsList.isEmpty()){
-			sqlSourceHelper.setCurrentIndex(Integer.toString((Integer.parseInt(sqlSourceHelper.getCurrentIndex())
-					+ rowsList.size())));
+			if (sqlSourceHelper.isCustomQuerySet()){
+					sqlSourceHelper.setCurrentIndex(rowsList.get(rowsList.size()-1).get(0).toString());
+			}
+			else
+			{
+				sqlSourceHelper.setCurrentIndex(Integer.toString((Integer.parseInt(sqlSourceHelper.getCurrentIndex())
+						+ rowsList.size())));
+			}
 		}
 		
 		return rowsList;
