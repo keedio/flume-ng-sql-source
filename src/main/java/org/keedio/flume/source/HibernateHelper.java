@@ -131,7 +131,7 @@ public class HibernateHelper {
 		
 		if (!rowsList.isEmpty()){
 			if (sqlSourceHelper.isCustomQuerySet()){
-					sqlSourceHelper.setCurrentIndex(rowsList.get(rowsList.size()-1).get(0).toString());
+				sqlSourceHelper.setCurrentIndex(rowsList.get(rowsList.size()-1).get(0).toString());
 			}
 			else
 			{
