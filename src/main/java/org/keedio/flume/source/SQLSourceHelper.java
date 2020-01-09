@@ -47,7 +47,7 @@ public class SQLSourceHelper {
   private int runQueryDelay, batchSize, maxRows;
   private String startFrom, currentIndex;
   private String statusFilePath, statusFileName, connectionURL, table,
-    columnsToSelect, customQuery, query, sourceName, delimiterEntry, connectionUserName, connectionPassword,
+    columnsToSelect, customQuery, sourceName, delimiterEntry, connectionUserName, connectionPassword,
 		defaultCharsetResultSet;
   private Boolean encloseByQuotes;
 
@@ -119,20 +119,32 @@ public class SQLSourceHelper {
     } else {
       currentIndex = getStatusFileIndex(startFrom);
     }
-
-    query = buildQuery();
   }
 
-  public String buildQuery() {
+  public String buildTableQuery() {
+    String query = table;
+
+    if (table != null && table.contains("$@$")) {
+        query = table.replace("$@$", currentIndex);
+    }
+
+    return query;
+  }
+
+  public String buildQuery(String table) {
 
     if (customQuery == null) {
       return "SELECT " + columnsToSelect + " FROM " + table;
     } else {
-      if (customQuery.contains("$@$")) {
-        return customQuery.replace("$@$", currentIndex);
-      } else {
-        return customQuery;
-      }
+        String query = customQuery;
+        if (query.contains("$@$")) {
+          query = query.replace("$@$", currentIndex);
+        }
+        if(query.contains("@")) {
+            query = query.replace("@", table);
+        }
+
+        return query;
     }
   }
 
@@ -160,15 +172,18 @@ public class SQLSourceHelper {
     }
 
     String[] row = null;
+    boolean ignoreFirstCol = isCustomQuerySet() && customQuery.contains("$@$");
 
     for (int i = 0; i < queryResult.size(); i++) {
       List<Object> rawRow = queryResult.get(i);
-      row = new String[rawRow.size()];
-      for (int j = 0; j < rawRow.size(); j++) {
+      int startIndex = ignoreFirstCol ? 1 : 0;
+      int rowSize = ignoreFirstCol ? rawRow.size() - 1 : rawRow.size();
+      row = new String[rowSize];
+      for (int j = startIndex; j < rawRow.size(); j++) {
         if (rawRow.get(j) != null) {
-          row[j] = rawRow.get(j).toString();
+          row[j - startIndex] = rawRow.get(j).toString();
         } else {
-          row[j] = "";
+          row[j - startIndex] = "";
         }
       }
       allRows.add(row);
@@ -349,16 +364,16 @@ public class SQLSourceHelper {
     return maxRows;
   }
 
-  String getQuery() {
-    return query;
-  }
-
   String getConnectionURL() {
     return connectionURL;
   }
 
   boolean isCustomQuerySet() {
     return (customQuery != null);
+  }
+
+  boolean isDynamicTable() {
+    return table != null && table.contains(" ");
   }
 
   Context getContext() {

@@ -95,48 +95,71 @@ public class HibernateHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	public List<List<Object>> executeQuery() throws InterruptedException {
-		
+
 		List<List<Object>> rowsList = new ArrayList<List<Object>>() ;
 		Query query;
 		
 		if (!session.isConnected()){
 			resetConnection();
 		}
-				
-		if (sqlSourceHelper.isCustomQuerySet()){
-			
-			query = session.createSQLQuery(sqlSourceHelper.buildQuery());
-			
-			if (sqlSourceHelper.getMaxRows() != 0){
-				query = query.setMaxResults(sqlSourceHelper.getMaxRows());
-			}			
-		}
-		else
-		{
-			query = session
-					.createSQLQuery(sqlSourceHelper.getQuery())
-					.setFirstResult(Integer.parseInt(sqlSourceHelper.getCurrentIndex()));
-			
-			if (sqlSourceHelper.getMaxRows() != 0){
-				query = query.setMaxResults(sqlSourceHelper.getMaxRows());
+
+		String[] tables = new String[0];
+		String tableQuery = sqlSourceHelper.buildTableQuery();
+		if(sqlSourceHelper.isDynamicTable()) {
+			query = session.createSQLQuery(tableQuery);
+			List<List<Object>> rowsListTable = new ArrayList<List<Object>>() ;
+
+			try {
+				rowsListTable = query.setResultTransformer(Transformers.TO_LIST).list();
+			} catch (Exception e) {
+				LOG.error("Exception thrown, resetting connection.", e);
+				resetConnection();
 			}
-		}
-		
-		try {
-			rowsList = query.setFetchSize(sqlSourceHelper.getMaxRows()).setResultTransformer(Transformers.TO_LIST).list();
-		}catch (Exception e){
-			LOG.error("Exception thrown, resetting connection.",e);
-			resetConnection();
-		}
-		
-		if (!rowsList.isEmpty()){
-			if (sqlSourceHelper.isCustomQuerySet()){
-				sqlSourceHelper.setCurrentIndex(rowsList.get(rowsList.size()-1).get(0).toString());
+
+			if (!rowsListTable.isEmpty()) {
+				tables = new String[rowsListTable.size()];
+				for(int i = 0; i < rowsListTable.size(); i++)
+					tables[i] = rowsListTable.get(i).get(0).toString();
 			}
-			else
-			{
-				sqlSourceHelper.setCurrentIndex(Integer.toString((Integer.parseInt(sqlSourceHelper.getCurrentIndex())
-						+ rowsList.size())));
+		} else {
+			tables = new String[1];
+			tables[0] = tableQuery;
+		}
+
+		for(String table : tables) {
+			if (sqlSourceHelper.isCustomQuerySet()) {
+
+				query = session.createSQLQuery(sqlSourceHelper.buildQuery(table));
+
+				if (sqlSourceHelper.getMaxRows() != 0) {
+					query = query.setMaxResults(sqlSourceHelper.getMaxRows());
+				}
+			} else {
+				query = session
+						.createSQLQuery(sqlSourceHelper.buildQuery(table))
+						.setFirstResult(Integer.parseInt(sqlSourceHelper.getCurrentIndex()));
+
+				if (sqlSourceHelper.getMaxRows() != 0) {
+					query = query.setMaxResults(sqlSourceHelper.getMaxRows());
+				}
+			}
+
+			try {
+				rowsList = query.setFetchSize(sqlSourceHelper.getMaxRows()).setResultTransformer(Transformers.TO_LIST).list();
+			} catch (Exception e) {
+				LOG.error("Exception thrown, resetting connection.", e);
+				resetConnection();
+			}
+
+			if (!rowsList.isEmpty()) {
+				if (sqlSourceHelper.isCustomQuerySet()) {
+					sqlSourceHelper.setCurrentIndex(rowsList.get(rowsList.size() - 1).get(0).toString());
+				} else {
+					sqlSourceHelper.setCurrentIndex(Integer.toString((Integer.parseInt(sqlSourceHelper.getCurrentIndex())
+							+ rowsList.size())));
+				}
+
+				break;
 			}
 		}
 		

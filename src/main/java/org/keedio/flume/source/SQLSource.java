@@ -108,6 +108,8 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 				sqlSourceCounter.incrementEventCount(result.size());
 				
 				sqlSourceHelper.updateStatusFile();
+
+				LOG.info("Process " + result.size() + " line(s)");
 			}
 			
 			sqlSourceCounter.endProcess(result.size());
