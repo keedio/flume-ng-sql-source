@@ -112,6 +112,7 @@ public class HibernateHelper {
 			try {
 				rowsListTable = query.setResultTransformer(Transformers.TO_LIST).list();
 			} catch (Exception e) {
+				LOG.info(query.getQueryString());
 				LOG.error("Exception thrown, resetting connection.", e);
 				resetConnection();
 			}
@@ -147,6 +148,7 @@ public class HibernateHelper {
 			try {
 				rowsList = query.setFetchSize(sqlSourceHelper.getMaxRows()).setResultTransformer(Transformers.TO_LIST).list();
 			} catch (Exception e) {
+				LOG.info(query.getQueryString());
 				LOG.error("Exception thrown, resetting connection.", e);
 				resetConnection();
 			}
