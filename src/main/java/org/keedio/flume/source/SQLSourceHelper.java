@@ -47,8 +47,6 @@ public class SQLSourceHelper {
 		defaultCharsetResultSet;
   private Boolean encloseByQuotes;
 
-  private long prevTick = -1;
-
   private Context context;
 
   private Map<String, String> statusFileJsonMap = new LinkedHashMap<String, String>();
@@ -225,17 +223,13 @@ public class SQLSourceHelper {
     statusFileJsonMap.put(LAST_INDEX_STATUS_FILE, currentIndex);
 
     try {
-      Writer fileWriter = new FileWriter(file, false);
-      JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
-      fileWriter.close();
+        Writer fileWriter = new FileWriter(file, false);
+        JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
+        fileWriter.close();
 
-      long tick = System.currentTimeMillis() / 1000;
-      if(tick != prevTick) {
-          prevTick = tick;
-          fileWriter = new FileWriter(bkFile, true);
-          JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
-          fileWriter.close();
-      }
+        fileWriter = new FileWriter(bkFile, true);
+        JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
+        fileWriter.close();
     } catch (IOException e) {
       LOG.error("Error writing incremental value to status file!!!", e);
     }
