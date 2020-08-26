@@ -1,10 +1,6 @@
 package org.keedio.flume.source;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Writer;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.util.*;
 
@@ -43,13 +39,15 @@ public class SQLSourceHelper {
 
   private static final Logger LOG = LoggerFactory.getLogger(SQLSourceHelper.class);
 
-  private File file, directory;
+  private File file, bkFile,directory;
   private int runQueryDelay, batchSize, maxRows;
   private String startFrom, currentIndex;
   private String statusFilePath, statusFileName, connectionURL, table,
     columnsToSelect, customQuery, sourceName, delimiterEntry, connectionUserName, connectionPassword,
 		defaultCharsetResultSet;
   private Boolean encloseByQuotes;
+
+  private long prevTick = -1;
 
   private Context context;
 
@@ -112,6 +110,7 @@ public class SQLSourceHelper {
     }
 
     file = new File(statusFilePath + "/" + statusFileName);
+    bkFile = new File(statusFilePath + "/" + statusFileName + ".bak");
 
     if (!isStatusFileCreated()) {
       currentIndex = startFrom;
@@ -209,9 +208,10 @@ public class SQLSourceHelper {
     }
 
     try {
-      Writer fileWriter = new FileWriter(file, false);
-      JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
-      fileWriter.close();
+        file = new File(statusFilePath + "/" + statusFileName);
+        Writer fileWriter = new FileWriter(file, false);
+        JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
+        fileWriter.close();
     } catch (IOException e) {
       LOG.error("Error creating value to status file!!!", e);
     }
@@ -228,38 +228,58 @@ public class SQLSourceHelper {
       Writer fileWriter = new FileWriter(file, false);
       JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
       fileWriter.close();
+
+      long tick = System.currentTimeMillis() / 1000;
+      if(tick != prevTick) {
+          prevTick = tick;
+          fileWriter = new FileWriter(bkFile, true);
+          JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
+          fileWriter.close();
+      }
     } catch (IOException e) {
       LOG.error("Error writing incremental value to status file!!!", e);
     }
   }
 
   private String getStatusFileIndex(String configuredStartValue) {
+      boolean useBackup;
+      if (!isStatusFileCreated()) {
+          LOG.info("Status file not created, using start value from config file and creating file");
+          return configuredStartValue;
+      } else {
+          JSONParser jsonParser = new JSONParser();
+          try {
+              FileReader fileReader = new FileReader(file);
 
-    if (!isStatusFileCreated()) {
-      LOG.info("Status file not created, using start value from config file and creating file");
-      return configuredStartValue;
-    } else {
-      try {
-        FileReader fileReader = new FileReader(file);
+              statusFileJsonMap = (Map) jsonParser.parse(fileReader);
+              checkJsonValues();
+              return statusFileJsonMap.get(LAST_INDEX_STATUS_FILE);
 
-        JSONParser jsonParser = new JSONParser();
-        statusFileJsonMap = (Map) jsonParser.parse(fileReader);
-        checkJsonValues();
-        return statusFileJsonMap.get(LAST_INDEX_STATUS_FILE);
+          } catch (Exception e) {
+              LOG.info("Exception reading status file, using copy");
+          }
 
-      } catch (Exception e) {
-        LOG.error("Exception reading status file, doing back up and creating new status file", e);
-        backupStatusFile();
-        return configuredStartValue;
+          try {
+              FileReader fileReader = new FileReader(bkFile);
+
+              statusFileJsonMap = (Map) jsonParser.parse(fileReader);
+              checkJsonValues();
+              return statusFileJsonMap.get(LAST_INDEX_STATUS_FILE);
+          } catch (Exception e) {
+              LOG.error("Exception reading copy file, doing back up and creating new status file", e);
+              backupStatusFile();
+              currentIndex = configuredStartValue;
+              createStatusFile();
+              return configuredStartValue;
+          }
       }
-    }
   }
 
   private void checkJsonValues() throws ParseException {
 
     // Check commons values to default and custom query
     if (!statusFileJsonMap.containsKey(SOURCE_NAME_STATUS_FILE) || !statusFileJsonMap.containsKey(URL_STATUS_FILE) ||
-      !statusFileJsonMap.containsKey(LAST_INDEX_STATUS_FILE)) {
+            !statusFileJsonMap.containsKey(LAST_INDEX_STATUS_FILE)) {
       LOG.error("Status file doesn't contains all required values");
       throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
     }
