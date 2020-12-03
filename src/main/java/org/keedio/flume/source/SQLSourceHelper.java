@@ -227,7 +227,7 @@ public class SQLSourceHelper {
         JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
         fileWriter.close();
 
-        fileWriter = new FileWriter(bkFile, true);
+        fileWriter = new FileWriter(bkFile, false);
         JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
         fileWriter.close();
     } catch (IOException e) {
