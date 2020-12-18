@@ -1,10 +1,6 @@
 package org.keedio.flume.source;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Writer;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.util.*;
 
@@ -43,11 +39,11 @@ public class SQLSourceHelper {
 
   private static final Logger LOG = LoggerFactory.getLogger(SQLSourceHelper.class);
 
-  private File file, directory;
+  private File file, bkFile,directory;
   private int runQueryDelay, batchSize, maxRows;
   private String startFrom, currentIndex;
   private String statusFilePath, statusFileName, connectionURL, table,
-    columnsToSelect, customQuery, query, sourceName, delimiterEntry, connectionUserName, connectionPassword,
+    columnsToSelect, customQuery, sourceName, delimiterEntry, connectionUserName, connectionPassword,
 		defaultCharsetResultSet;
   private Boolean encloseByQuotes;
 
@@ -112,6 +108,7 @@ public class SQLSourceHelper {
     }
 
     file = new File(statusFilePath + "/" + statusFileName);
+    bkFile = new File(statusFilePath + "/" + statusFileName + ".bak");
 
     if (!isStatusFileCreated()) {
       currentIndex = startFrom;
@@ -119,20 +116,32 @@ public class SQLSourceHelper {
     } else {
       currentIndex = getStatusFileIndex(startFrom);
     }
-
-    query = buildQuery();
   }
 
-  public String buildQuery() {
+  public String buildTableQuery() {
+    String query = table;
+
+    if (table != null && table.contains("$@$")) {
+        query = table.replace("$@$", currentIndex);
+    }
+
+    return query;
+  }
+
+  public String buildQuery(String table) {
 
     if (customQuery == null) {
       return "SELECT " + columnsToSelect + " FROM " + table;
     } else {
-      if (customQuery.contains("$@$")) {
-        return customQuery.replace("$@$", currentIndex);
-      } else {
-        return customQuery;
-      }
+        String query = customQuery;
+        if (query.contains("$@$")) {
+          query = query.replace("$@$", currentIndex);
+        }
+        if(query.contains("@")) {
+            query = query.replace("@", table);
+        }
+
+        return query;
     }
   }
 
@@ -160,15 +169,18 @@ public class SQLSourceHelper {
     }
 
     String[] row = null;
+    boolean ignoreFirstCol = isCustomQuerySet() && customQuery.contains("$@$");
 
     for (int i = 0; i < queryResult.size(); i++) {
       List<Object> rawRow = queryResult.get(i);
-      row = new String[rawRow.size()];
-      for (int j = 0; j < rawRow.size(); j++) {
+      int startIndex = ignoreFirstCol ? 1 : 0;
+      int rowSize = ignoreFirstCol ? rawRow.size() - 1 : rawRow.size();
+      row = new String[rowSize];
+      for (int j = startIndex; j < rawRow.size(); j++) {
         if (rawRow.get(j) != null) {
-          row[j] = rawRow.get(j).toString();
+          row[j - startIndex] = rawRow.get(j).toString();
         } else {
-          row[j] = "";
+          row[j - startIndex] = "";
         }
       }
       allRows.add(row);
@@ -194,9 +206,10 @@ public class SQLSourceHelper {
     }
 
     try {
-      Writer fileWriter = new FileWriter(file, false);
-      JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
-      fileWriter.close();
+        file = new File(statusFilePath + "/" + statusFileName);
+        Writer fileWriter = new FileWriter(file, false);
+        JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
+        fileWriter.close();
     } catch (IOException e) {
       LOG.error("Error creating value to status file!!!", e);
     }
@@ -210,41 +223,57 @@ public class SQLSourceHelper {
     statusFileJsonMap.put(LAST_INDEX_STATUS_FILE, currentIndex);
 
     try {
-      Writer fileWriter = new FileWriter(file, false);
-      JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
-      fileWriter.close();
+        Writer fileWriter = new FileWriter(file, false);
+        JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
+        fileWriter.close();
+
+        fileWriter = new FileWriter(bkFile, false);
+        JSONValue.writeJSONString(statusFileJsonMap, fileWriter);
+        fileWriter.close();
     } catch (IOException e) {
       LOG.error("Error writing incremental value to status file!!!", e);
     }
   }
 
   private String getStatusFileIndex(String configuredStartValue) {
+      boolean useBackup;
+      if (!isStatusFileCreated()) {
+          LOG.info("Status file not created, using start value from config file and creating file");
+          return configuredStartValue;
+      } else {
+          JSONParser jsonParser = new JSONParser();
+          try {
+              FileReader fileReader = new FileReader(file);
 
-    if (!isStatusFileCreated()) {
-      LOG.info("Status file not created, using start value from config file and creating file");
-      return configuredStartValue;
-    } else {
-      try {
-        FileReader fileReader = new FileReader(file);
+              statusFileJsonMap = (Map) jsonParser.parse(fileReader);
+              checkJsonValues();
+              return statusFileJsonMap.get(LAST_INDEX_STATUS_FILE);
 
-        JSONParser jsonParser = new JSONParser();
-        statusFileJsonMap = (Map) jsonParser.parse(fileReader);
-        checkJsonValues();
-        return statusFileJsonMap.get(LAST_INDEX_STATUS_FILE);
+          } catch (Exception e) {
+              LOG.info("Exception reading status file, using copy");
+          }
 
-      } catch (Exception e) {
-        LOG.error("Exception reading status file, doing back up and creating new status file", e);
-        backupStatusFile();
-        return configuredStartValue;
+          try {
+              FileReader fileReader = new FileReader(bkFile);
+
+              statusFileJsonMap = (Map) jsonParser.parse(fileReader);
+              checkJsonValues();
+              return statusFileJsonMap.get(LAST_INDEX_STATUS_FILE);
+          } catch (Exception e) {
+              LOG.error("Exception reading copy file, doing back up and creating new status file", e);
+              backupStatusFile();
+              currentIndex = configuredStartValue;
+              createStatusFile();
+              return configuredStartValue;
+          }
       }
-    }
   }
 
   private void checkJsonValues() throws ParseException {
 
     // Check commons values to default and custom query
     if (!statusFileJsonMap.containsKey(SOURCE_NAME_STATUS_FILE) || !statusFileJsonMap.containsKey(URL_STATUS_FILE) ||
-      !statusFileJsonMap.containsKey(LAST_INDEX_STATUS_FILE)) {
+            !statusFileJsonMap.containsKey(LAST_INDEX_STATUS_FILE)) {
       LOG.error("Status file doesn't contains all required values");
       throw new ParseException(ERROR_UNEXPECTED_EXCEPTION);
     }
@@ -349,16 +378,16 @@ public class SQLSourceHelper {
     return maxRows;
   }
 
-  String getQuery() {
-    return query;
-  }
-
   String getConnectionURL() {
     return connectionURL;
   }
 
   boolean isCustomQuerySet() {
     return (customQuery != null);
+  }
+
+  boolean isDynamicTable() {
+    return table != null && table.contains(" ");
   }
 
   Context getContext() {

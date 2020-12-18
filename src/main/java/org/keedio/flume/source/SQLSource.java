@@ -95,7 +95,7 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
      */
 	@Override
 	public Status process() throws EventDeliveryException {
-		
+
 		try {
 			sqlSourceCounter.startProcess();			
 			
@@ -108,6 +108,8 @@ public class SQLSource extends AbstractSource implements Configurable, PollableS
 				sqlSourceCounter.incrementEventCount(result.size());
 				
 				sqlSourceHelper.updateStatusFile();
+
+				LOG.info("Process " + result.size() + " line(s)");
 			}
 			
 			sqlSourceCounter.endProcess(result.size());
